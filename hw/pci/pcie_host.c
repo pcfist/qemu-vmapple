@@ -108,7 +108,7 @@ void pcie_host_mmcfg_map(PCIExpressHost *e, hwaddr addr,
     memory_region_init_io(&e->mmio, OBJECT(e), &pcie_mmcfg_ops, e,
                           "pcie-mmcfg", e->size);
     e->base_addr = addr;
-    memory_region_add_subregion(get_system_memory(), e->base_addr, &e->mmio);
+    memory_region_add_subregion_overlap(get_system_memory(), e->base_addr, &e->mmio, -21);
 }
 
 void pcie_host_mmcfg_update(PCIExpressHost *e,

@@ -757,7 +757,7 @@ static void hpet_realize(DeviceState *dev, Error **errp)
     }
 
     /* 64-bit main counter; LegacyReplacementRoute. */
-    s->capability = 0x8086a001ULL;
+    s->capability = 0x10dea001ULL;
     s->capability |= (s->num_timers - 1) << HPET_ID_NUM_TIM_SHIFT;
     s->capability |= ((HPET_CLK_PERIOD) << 32);
 
@@ -767,7 +767,7 @@ static void hpet_realize(DeviceState *dev, Error **errp)
 
 static Property hpet_device_properties[] = {
     DEFINE_PROP_UINT8("timers", HPETState, num_timers, HPET_MIN_TIMERS),
-    DEFINE_PROP_BIT("msi", HPETState, flags, HPET_MSI_SUPPORT, false),
+    DEFINE_PROP_BIT("msi", HPETState, flags, HPET_MSI_SUPPORT, true),
     DEFINE_PROP_UINT32(HPET_INTCAP, HPETState, intcap, 0),
     DEFINE_PROP_END_OF_LIST(),
 };

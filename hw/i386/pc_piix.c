@@ -481,7 +481,6 @@ static QEMUMachine pc_i440fx_machine_v2_2 = {
     .name = "pc-i440fx-2.2",
     .alias = "pc",
     .init = pc_init_pci,
-    .is_default = 1,
 };
 
 #define PC_I440FX_2_1_MACHINE_OPTIONS                           \

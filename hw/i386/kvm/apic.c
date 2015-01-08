@@ -158,9 +158,15 @@ static void kvm_apic_mem_write(void *opaque, hwaddr addr,
     MSIMessage msg = { .address = addr, .data = data };
     int ret;
 
+    if (addr < 0xfee00000) {
+        // XXX MSI for bucket hack
+        msg.address = 0xfee00000;
+        msg.data = 0x34;
+    }
+
     ret = kvm_irqchip_send_msi(kvm_state, msg);
     if (ret < 0) {
-        fprintf(stderr, "KVM: injection failed, MSI lost (%s)\n",
+        fprintf(stderr, "KVM: injection failed, MSI to %#lx/%#lx lost (%s)\n", addr, data,
                 strerror(-ret));
     }
 }

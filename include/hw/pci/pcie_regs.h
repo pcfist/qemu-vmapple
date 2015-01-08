@@ -37,6 +37,7 @@
 
 #define PCI_EXP_LNK_MLW_SHIFT           (ffs(PCI_EXP_LNKCAP_MLW) - 1)
 #define PCI_EXP_LNK_MLW_1               (1 << PCI_EXP_LNK_MLW_SHIFT)
+#define PCI_EXP_LNK_MLW_4               (4 << PCI_EXP_LNK_MLW_SHIFT)
 
 /* PCI_EXP_LINKCAP */
 #define PCI_EXP_LNKCAP_ASPMS_SHIFT      (ffs(PCI_EXP_LNKCAP_ASPMS) - 1)
