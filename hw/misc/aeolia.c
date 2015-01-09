@@ -100,7 +100,8 @@ typedef struct AeoliaBucketState {
 static uint64_t aeolia_ram_read(void *opaque, hwaddr addr,
                               unsigned size)
 {
-    DPRINTF("qemu: Enter aeolia_ram_readl %s at %" PRIx64 "\n", opaque, addr);
+    char *s = opaque;
+    DPRINTF("qemu: aeolia_ram_readl %s at %" PRIx64 "\n", s, addr);
 
     return 0;
 }
@@ -108,7 +109,8 @@ static uint64_t aeolia_ram_read(void *opaque, hwaddr addr,
 static void aeolia_ram_write(void *opaque, hwaddr addr,
                            uint64_t value, unsigned size)
 {
-    DPRINTF("qemu: Enter aeolia_ram_writel %s at %" PRIx64 " = %#lx\n", opaque, addr, value);
+    char *s = opaque;
+    DPRINTF("qemu: aeolia_ram_writel %s at %" PRIx64 " = %#lx\n", s, addr, value);
 }
 
 static const MemoryRegionOps aeolia_ram_ops = {
@@ -212,7 +214,7 @@ static void aeolia_bucket_misc_write(void *opaque, hwaddr addr,
 {
     AeoliaBucketState *s = opaque;
     char tmp[4];
-    DPRINTF("qemu: Enter %s at %" PRIx64 " = %#lx\n", __func__, addr, value);
+    DPRINTF("qemu: %s at %" PRIx64 " <- %#lx\n", __func__, addr, value);
 
     switch (addr) {
         case 0x182000 ... 0x186000:
@@ -304,7 +306,7 @@ static int aeolia_dmac_init(PCIDevice *dev)
                           "aeolia-dmac-1", 0x100);
     pci_register_bar(dev, 1, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[1]);
 #endif
-    memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_ram_ops, "dmac-2",
+    memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_ram_ops, (void*)"dmac-2",
                           "aeolia-dmac-2", 0x1000);
     pci_register_bar(dev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[2]);
 
@@ -324,13 +326,13 @@ static int aeolia_gbe_init(PCIDevice *dev)
     pci_set_word(pci_conf + PCI_COMMAND, PCI_COMMAND_IO | PCI_COMMAND_MEMORY |
                  PCI_COMMAND_MASTER | PCI_COMMAND_SPECIAL);
 
-    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, "gbe-0",
+    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, (void*)"gbe-0",
                           "aeolia-gbe-0", 0x100);
     pci_register_bar(dev, 0, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[0]);
-    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, "gbe-1",
+    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, (void*)"gbe-1",
                           "aeolia-gbe-1", 0x100);
     pci_register_bar(dev, 1, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[1]);
-    memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_ram_ops, "gbe-2",
+    memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_ram_ops, (void*)"gbe-2",
                           "aeolia-gbe-2", 0x100);
     pci_register_bar(dev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[2]);
 
@@ -349,11 +351,11 @@ static int aeolia_spm_init(PCIDevice *dev)
     pci_set_word(pci_conf + PCI_COMMAND, PCI_COMMAND_IO | PCI_COMMAND_MEMORY |
                  PCI_COMMAND_MASTER | PCI_COMMAND_SPECIAL);
 
-    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, "ddr3",
+    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, (void*)"ddr3",
                           "aeolia-ddr3", 0x10000000);
     pci_register_bar(dev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[1]);
 
-    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, "spm",
+    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, (void*)"spm",
                           "aeolia-spm", 0x40000);
     pci_register_bar(dev, 5, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[0]);
 
@@ -373,13 +375,13 @@ static int aeolia_acpi_init(PCIDevice *dev)
                  PCI_COMMAND_MASTER | PCI_COMMAND_SPECIAL);
 
     /* Aeolia Area */
-    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, "acpi-0",
+    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, (void*)"acpi-0",
                           "aeolia-acpi-0", 0x2000000);
     pci_register_bar(dev, 0, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[0]);
-    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, "acpi-1",
+    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, (void*)"acpi-1",
                           "aeolia-acpi-1", 0x100);
     pci_register_bar(dev, 1, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[1]);
-    memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_ram_ops, "acpi-2",
+    memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_ram_ops, (void*)"acpi-2",
                           "aeolia-acpi-2", 0x100);
     pci_register_bar(dev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[2]);
 
@@ -401,22 +403,22 @@ static int aeolia_bucket_init(PCIDevice *dev)
                  PCI_COMMAND_MASTER | PCI_COMMAND_SPECIAL);
 
     /* Aeolia Area */
-    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, "eMMC",
+    memory_region_init_io(&s->iomem[0], OBJECT(dev), &aeolia_ram_ops, (void*)"eMMC",
                           "aeolia eMMC", 0x100000);
     pci_register_bar(dev, 0, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[0]);
-    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, "bucket-1",
+    memory_region_init_io(&s->iomem[1], OBJECT(dev), &aeolia_ram_ops, (void*)"bucket-1",
                           "aeolia-bucket-1", 0x100);
     pci_register_bar(dev, 1, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[1]);
     memory_region_init_io(&s->iomem[2], OBJECT(dev), &aeolia_bucket_self_ops, s,
                           "aeolia Pervasive 0", 0x8000);
     pci_register_bar(dev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[2]);
-    memory_region_init_io(&s->iomem[3], OBJECT(dev), &aeolia_ram_ops, "bucket-3",
+    memory_region_init_io(&s->iomem[3], OBJECT(dev), &aeolia_ram_ops, (void*)"bucket-3",
                           "aeolia-bucket-3", 0x100);
     pci_register_bar(dev, 3, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[3]);
     memory_region_init_io(&s->iomem[4], OBJECT(dev), &aeolia_bucket_misc_ops, s,
                           "aeolia misc peripherals", 0x200000);
     pci_register_bar(dev, 4, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[4]);
-    memory_region_init_io(&s->iomem[5], OBJECT(dev), &aeolia_ram_ops, "bucket-5",
+    memory_region_init_io(&s->iomem[5], OBJECT(dev), &aeolia_ram_ops, (void*)"bucket-5",
                           "aeolia-bucket-5", 0x100);
     pci_register_bar(dev, 5, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->iomem[5]);
 
@@ -426,8 +428,8 @@ static int aeolia_bucket_init(PCIDevice *dev)
     msi_init(dev, 0x50, 1, true, false);
 
     s->hpet = SYS_BUS_DEVICE(qdev_try_create(NULL, TYPE_HPET));
-    qdev_prop_set_uint8(s->hpet, "timers", 4);
-    qdev_prop_set_uint32(s->hpet, HPET_INTCAP, 0x10);
+    qdev_prop_set_uint8(DEVICE(s->hpet), "timers", 4);
+    qdev_prop_set_uint32(DEVICE(s->hpet), HPET_INTCAP, 0x10);
     qdev_init_nofail(DEVICE(s->hpet));
 
     dinfo = drive_get(IF_PFLASH, 0, 0);
