@@ -25,6 +25,7 @@
 #include "hw/sysbus.h"
 #include "hw/pci/msi.h"
 #include "hw/timer/hpet.h"
+#include "sysemu/block-backend.h"
 
 #define AEOLIA_DEBUG
 #ifdef AEOLIA_DEBUG
@@ -86,8 +87,14 @@ typedef struct AeoliaBucketState {
     SysBusDevice *hpet;
     uint64_t bars[8 * 6][2];
     MemoryRegion bar[8 * 6];
+    BlockDriverState *flash;
     uint32_t cmd;
     uint32_t dma_wip;
+    uint32_t dma_active; // transfer enable == 1?
+    uint32_t dma_addr;
+    uint32_t dma_len;
+    uint32_t sflash_offset;
+    uint32_t sflash_data;
 } AeoliaBucketState;
 
 static uint64_t aeolia_ram_read(void *opaque, hwaddr addr,
@@ -115,6 +122,7 @@ static const MemoryRegionOps aeolia_ram_ops = {
 #define AEOLIA_STATUS_BUSY 0x10000
 #define AEOLIA_STATUS_DONE 0x20000
 #define AEOLIA_DMA_STATUS_DONE 0x4
+#define AEOLIA_DMA_STATUS_MASK 0x7
 
 static uint64_t aeolia_bucket_misc_read(void *opaque, hwaddr addr,
                                         unsigned size)
@@ -129,7 +137,6 @@ static uint64_t aeolia_bucket_misc_read(void *opaque, hwaddr addr,
         case 0x1c8000 ... 0x1c8180:
             addr &= 0x1ff;
             return s->bars[addr / 0x8][(addr & 0x4) ? 1 : 0];
-            break;
         case 0xc2040: // issue_command()
             switch (s->cmd) {
                 case AEOLIA_CMD_GET_STATUS:
@@ -137,9 +144,18 @@ static uint64_t aeolia_bucket_misc_read(void *opaque, hwaddr addr,
                     break;
             }
             break;
+        case 0xc2000: // aeolia_sflash_read()
+            r = s->sflash_offset;
+            break;
+        case 0xc2004: // aeolia_sflash_read()
+            r = s->sflash_data;
+            break;
         case 0xc3000: // read_dma_callback()
             s->dma_wip ^= AEOLIA_DMA_STATUS_DONE;
             r = s->dma_wip;
+            break;
+        case 0xc3004: // aeolia_sflash_read()
+            r = s->dma_active;
             break;
     }
 
@@ -172,10 +188,30 @@ printf("XXX map at %#lx\n", s->bars[id][1]);
 #endif
 }
 
+static void aeolia_do_cmd(AeoliaBucketState *s)
+{
+    void *p;
+
+    switch (s->cmd & 0x7) {
+    case 0x3:
+        switch (s->cmd & ~0x7) {
+        case 0x12100100:
+            p = g_malloc(s->dma_len);
+            bdrv_pread(s->flash, s->sflash_offset, p, s->dma_len);
+            cpu_physical_memory_write(s->dma_addr, p, s->dma_len);
+            g_free(p);
+            DPRINTF("DMA transfer of %#x bytes from %#x to %x completed\n",
+                    s->dma_len, s->sflash_offset, s->dma_addr);
+            break;
+        }
+    }
+}
+
 static void aeolia_bucket_misc_write(void *opaque, hwaddr addr,
                                      uint64_t value, unsigned size)
 {
     AeoliaBucketState *s = opaque;
+    char tmp[4];
     DPRINTF("qemu: Enter %s at %" PRIx64 " = %#lx\n", __func__, addr, value);
 
     switch (addr) {
@@ -187,8 +223,28 @@ static void aeolia_bucket_misc_write(void *opaque, hwaddr addr,
             s->bars[addr / 0x8][(addr & 0x4) ? 1 : 0] = value;
             update_bar(s, addr / 0x8);
             break;
+        case 0xc2000: // aeolia_sflash_read()
+            s->sflash_offset = value;
+            if (s->flash) {
+                bdrv_pread(s->flash, value, tmp, 4);
+                s->sflash_data = ldl_le_p(tmp);
+            }
+            break;
+        case 0xc2004: // aeolia_sflash_read()
+            s->sflash_data = value;
+            break;
         case 0xc2008: // issue_command()
             s->cmd = value & ~0x80000000;
+            aeolia_do_cmd(s);
+            break;
+        case 0xc2044: // issue_command()
+            s->dma_addr = value;
+            break;
+        case 0xc2048: // issue_command()
+            s->dma_len = value & ~0x80000000;
+            break;
+        case 0xc3004: // aeolia_sflash_read()
+            s->dma_active = value;
             break;
     }
 }
@@ -339,6 +395,7 @@ static int aeolia_bucket_init(PCIDevice *dev)
 {
     AeoliaBucketState *s = AEOLIA_BUCKET(dev);
     uint8_t *pci_conf = dev->config;
+    DriveInfo *dinfo;
 
     pci_set_word(pci_conf + PCI_COMMAND, PCI_COMMAND_IO | PCI_COMMAND_MEMORY |
                  PCI_COMMAND_MASTER | PCI_COMMAND_SPECIAL);
@@ -372,6 +429,11 @@ static int aeolia_bucket_init(PCIDevice *dev)
     qdev_prop_set_uint8(s->hpet, "timers", 4);
     qdev_prop_set_uint32(s->hpet, HPET_INTCAP, 0x10);
     qdev_init_nofail(DEVICE(s->hpet));
+
+    dinfo = drive_get(IF_PFLASH, 0, 0);
+    if (dinfo) {
+        s->flash = blk_bs(blk_by_legacy_dinfo(dinfo));
+    }
 
     return 0;
 }

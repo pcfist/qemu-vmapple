@@ -166,7 +166,7 @@ static void pc_init1(MachineState *machine,
     guest_info->has_acpi_build = has_acpi_build;
     guest_info->legacy_acpi_table_size = legacy_acpi_table_size;
 
-    guest_info->isapc_ram_fw = !pci_enabled;
+    guest_info->isapc_ram_fw = true; // disable pflash handling
     guest_info->has_reserved_memory = has_reserved_memory;
 
     if (smbios_defaults) {

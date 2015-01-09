@@ -235,6 +235,7 @@ void pc_system_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
     DriveInfo *pflash_drv;
 
     pflash_drv = drive_get(IF_PFLASH, 0, 0);
+    isapc_ram_fw = true;
 
     if (isapc_ram_fw || pflash_drv == NULL) {
         /* When a pflash drive is not found, use rom-mode */
