@@ -53,6 +53,7 @@ typedef struct HPETTimer {  /* timers */
     uint64_t config;        /* configuration/cap */
     uint64_t cmp;           /* comparator */
     uint64_t fsb;           /* FSB route */
+    bool fsb_override;
     /* Hidden register state */
     uint64_t period;        /* Last value written to comparator */
     uint8_t wrap_flag;      /* timer pop will indicate wrap for one-shot 32-bit
@@ -82,6 +83,16 @@ typedef struct HPETState {
     uint64_t hpet_counter;      /* main counter */
     uint8_t  hpet_id;           /* instance id */
 } HPETState;
+
+void hpet_set_msi(HPETState *hpet, uint32_t addr, uint32_t val);
+void hpet_set_msi(HPETState *hpet, uint32_t addr, uint32_t val)
+{
+    int i;
+    for (i = 0; i < HPET_MAX_TIMERS; i++) {
+        hpet->timer[i].fsb = ((uint64_t)addr << 32) | val;
+        hpet->timer[i].fsb_override = 1;
+    }
+}
 
 static uint32_t hpet_in_legacy_mode(HPETState *s)
 {
@@ -569,10 +580,14 @@ static void hpet_ram_write(void *opaque, hwaddr addr,
                 }
                 break;
         case HPET_TN_ROUTE:
-            timer->fsb = (timer->fsb & 0xffffffff00000000ULL) | new_val;
+            if (!timer->fsb_override) {
+                timer->fsb = (timer->fsb & 0xffffffff00000000ULL) | new_val;
+            }
             break;
         case HPET_TN_ROUTE + 4:
-            timer->fsb = (new_val << 32) | (timer->fsb & 0xffffffff);
+            if (!timer->fsb_override) {
+                timer->fsb = (new_val << 32) | (timer->fsb & 0xffffffff);
+            }
             break;
         default:
             DPRINTF("qemu: invalid hpet_ram_writel\n");
