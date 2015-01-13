@@ -96,6 +96,7 @@ typedef struct AeoliaBucketState {
     uint32_t dma_len;
     uint32_t sflash_offset;
     uint32_t sflash_data;
+    uint32_t sflash_status;
 
     uint32_t msi_data_fn4;
     uint32_t msi_data_fn5;
@@ -193,18 +194,21 @@ static uint64_t aeolia_bucket_misc_read(void *opaque, hwaddr addr,
         case 0x1c8000 ... 0x1c8180:
             addr &= 0x1ff;
             return s->bars[addr / 0x8][(addr & 0x4) ? 1 : 0];
+        case 0xc2000: // aeolia_sflash_read()
+            r = s->sflash_offset;
+            break;
+        case 0xc2004: // aeolia_sflash_read()
+            r = s->sflash_data;
+            break;
+        case 0xc203c:
+            r = s->sflash_status;
+            break;
         case 0xc2040: // issue_command()
             switch (s->cmd) {
                 case AEOLIA_CMD_GET_STATUS:
                     r = AEOLIA_STATUS_DONE;
                     break;
             }
-            break;
-        case 0xc2000: // aeolia_sflash_read()
-            r = s->sflash_offset;
-            break;
-        case 0xc2004: // aeolia_sflash_read()
-            r = s->sflash_data;
             break;
         case 0xc3000: // read_dma_callback()
             s->dma_wip ^= AEOLIA_DMA_STATUS_DONE;
@@ -256,14 +260,15 @@ static void aeolia_do_cmd(AeoliaBucketState *s)
             bdrv_pread(s->flash, s->sflash_offset, p, s->dma_len);
             cpu_physical_memory_write(s->dma_addr, p, s->dma_len);
             g_free(p);
+            s->sflash_status |= 1;
             DPRINTF("DMA transfer of %#x bytes from %#x to %x completed\n",
                     s->dma_len, s->sflash_offset, s->dma_addr);
 
             /* send MSI */
             stl_le_phys(&address_space_memory,
-                        s->msi_addr_fn4, s->msi_data_fn4 | s->msi_data_fn4dev5);
+                        s->msi_addr_fn4, s->msi_data_fn4 | s->msi_data_fn4dev11);
             DPRINTF("Sending MSI to %#x/%#x\n",
-                     s->msi_addr_fn4, s->msi_data_fn4 | s->msi_data_fn4dev5);
+                     s->msi_addr_fn4, s->msi_data_fn4 | s->msi_data_fn4dev11);
             break;
         }
     }
@@ -411,6 +416,9 @@ static void aeolia_bucket_misc_write(void *opaque, hwaddr addr,
         case 0xc2008: // issue_command()
             s->cmd = value & ~0x80000000;
             aeolia_do_cmd(s);
+            break;
+        case 0xc203c:
+            s->sflash_status = value;
             break;
         case 0xc2044: // issue_command()
             s->dma_addr = value;
