@@ -300,9 +300,14 @@ static void icc_calculate_csum(uint8_t *data)
     *csum_ptr = csum;
 }
 
-#define ICC_CMD_QUERY                0x42
-#define ICC_CMD_QUERY_BUTTONS        0x08
-#define ICC_CMD_QUERY_NVRAM          0x03 /* ? */
+#define ICC_CMD_QUERY                         0x42
+#define ICC_CMD_QUERY_BOARD                   0x02
+#define ICC_CMD_QUERY_BOARD_FLAG_BOARD_ID       0x0005
+#define ICC_CMD_QUERY_BOARD_FLAG_VERSION        0x0006
+#define ICC_CMD_QUERY_NVRAM                   0x03
+#define ICC_CMD_QUERY_NVRAM_FLAG_READ           0x0001
+#define ICC_CMD_QUERY_BUTTONS                 0x08
+#define ICC_CMD_QUERY_SNVRAM_READ             0x8d
 
 static void icc_reply_query(AeoliaBucketState *s)
 {
