@@ -300,6 +300,10 @@ static void icc_calculate_csum(uint8_t *data)
     *csum_ptr = csum;
 }
 
+#define ICC_CMD_QUERY                0x42
+#define ICC_CMD_QUERY_BUTTONS        0x08
+#define ICC_CMD_QUERY_NVRAM          0x03 /* ? */
+
 static void icc_reply_query(AeoliaBucketState *s)
 {
     char id = spm->data[0x2c001];
@@ -332,7 +336,9 @@ static void icc_doorbell(AeoliaBucketState *s)
     }
 
     if (s->doorbell_status & 1) {
-        switch (spm->data[0x2c000]) {
+        char cmd = spm->data[0x2c000];
+        DPRINTF("qemu: ICC: New command: %x\n", cmd);
+        switch (cmd) {
         case 0x42:
             icc_reply_query(s);
             break;
