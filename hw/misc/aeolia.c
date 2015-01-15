@@ -309,13 +309,59 @@ static void icc_calculate_csum(uint8_t *data)
 #define ICC_CMD_QUERY_BUTTONS                 0x08
 #define ICC_CMD_QUERY_SNVRAM_READ             0x8d
 
-static void icc_reply_query(AeoliaBucketState *s)
+static int icc_query_nvram_read(AeoliaBucketState *s)
+{
+    short buffer_len = lduw_le_p(&spm->data[0x2c008]);
+    short len = lduw_le_p(&spm->data[0x2c010]);
+    short offset = lduw_le_p(&spm->data[0x2c00e]);
+
+    DPRINTF("qemu: ICC: NVRAM read %d bytes from %#x!\n", len, offset);
+    /* XXX write read contents at 0x12 */
+
+    return buffer_len;
+}
+
+static int icc_query_board_id(AeoliaBucketState *s)
+{
+    uint16_t reply[] = { 0x0000, 0x0203, 0x0101, 0x0102,
+                         0x0106, 0x0000 };
+    int i;
+
+    for (i = 0; i < ARRAY_SIZE(reply); i++) {
+        stw_le_p(&spm->data[0x2c00c + (i * 2)], reply[i]);
+    }
+
+    DPRINTF("qemu: ICC: read board id\n");
+
+    return sizeof(reply);
+}
+
+static int icc_query_board_version(AeoliaBucketState *s)
+{
+    uint16_t reply[] = { 0x0000, 0x0000, 0x0000, 0x0025,
+                         0x0000, 0x0000, 0x0000, 0x0a93,
+                         0x0000, 0x0020, 0x0000, 0x0045,
+                         0x0000, 0x0000, 0x0000, 0x0000,
+                         0x0000, 0x0001, 0x0000, 0x0000,
+                         0x0710, 0x4520, 0x0054, 0x0000 };
+    int i;
+
+    for (i = 0; i < ARRAY_SIZE(reply); i++) {
+        stw_le_p(&spm->data[0x2c00c + (i * 2)], reply[i]);
+    }
+
+    DPRINTF("qemu: ICC: read board version\n");
+
+    return sizeof(reply);
+}
+
+static void icc_query(AeoliaBucketState *s)
 {
     char id = spm->data[0x2c001];
     short flags = lduw_le_p(&spm->data[0x2c002]);
     short token = lduw_le_p(&spm->data[0x2c006]);
     char *reply = (char *)&spm->data[0x2c800];
-    int len = 10;
+    uint16_t len = lduw_le_p(&spm->data[0x2c008]);
 
     DPRINTF("qemu: ICC: Device enumeration!\n");
 
@@ -326,8 +372,35 @@ static void icc_reply_query(AeoliaBucketState *s)
     reply[1] = id;
     stw_le_p(&reply[2], flags);
     stw_le_p(&reply[6], token);
-    stw_le_p(&reply[8], len);
 
+    switch (id) {
+    case ICC_CMD_QUERY_BOARD:
+        switch (flags) {
+        case ICC_CMD_QUERY_BOARD_FLAG_BOARD_ID:
+            len = icc_query_board_id(s);
+            break;
+        case ICC_CMD_QUERY_BOARD_FLAG_VERSION:
+            len = icc_query_board_version(s);
+            break;
+        default:
+            DPRINTF("qemu: ICC: Unknown NVRAM query %#x!\n", flags);
+        }
+        break;
+    case ICC_CMD_QUERY_NVRAM:
+        switch (flags) {
+        case ICC_CMD_QUERY_NVRAM_FLAG_READ:
+            len = icc_query_nvram_read(s);
+            break;
+        default:
+            DPRINTF("qemu: ICC: Unknown NVRAM query %#x!\n", flags);
+        }
+        break;
+    default:
+        DPRINTF("qemu: ICC: Unknown query %#x!\n", id);
+        break;
+    }
+
+    stw_le_p(&reply[8], len);
     icc_calculate_csum(&spm->data[0x2c800]);
     s->icc_status |= ICC_STATUS_MSG_PENDING;
     icc_send_irq(s);
@@ -345,7 +418,7 @@ static void icc_doorbell(AeoliaBucketState *s)
         DPRINTF("qemu: ICC: New command: %x\n", cmd);
         switch (cmd) {
         case 0x42:
-            icc_reply_query(s);
+            icc_query(s);
             break;
         }
         s->doorbell_status &= ~1;
