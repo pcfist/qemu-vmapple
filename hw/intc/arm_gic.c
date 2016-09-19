@@ -25,6 +25,7 @@
 #include "qom/cpu.h"
 #include "qemu/log.h"
 #include "trace.h"
+#include "kvm_arm.h"
 
 //#define DEBUG_GIC
 
@@ -544,6 +545,11 @@ static void gic_deactivate_irq(GICState *s, int cpu, int irq, MemTxAttrs attrs)
         return;
     }
 
+    /* Tell KVM that we want to know about timer IRQs again */
+    if (kvm_enabled()) {
+        kvm_arm_eoi_notify(cpu);
+    }
+
     GIC_CLEAR_ACTIVE(irq, cm);
 }
 
@@ -553,6 +559,12 @@ void gic_complete_irq(GICState *s, int cpu, int irq, MemTxAttrs attrs)
     int group;
 
     DPRINTF("EOI %d\n", irq);
+
+    /* Tell KVM that we want to know about timer IRQs again */
+    if (kvm_enabled()) {
+        kvm_arm_eoi_notify(cpu);
+    }
+
     if (irq >= s->num_irq) {
         /* This handles two cases:
          * 1. If software writes the ID of a spurious interrupt [ie 1023]
@@ -897,6 +909,10 @@ static void gic_dist_writeb(void *opaque, hwaddr offset,
                     trace_gic_enable_irq(irq + i);
                 }
                 GIC_SET_ENABLED(irq + i, cm);
+                /* Tell KVM that we want to know about timer IRQs again */
+                if (kvm_enabled()) {
+                    kvm_arm_eoi_notify(cpu);
+                }
                 /* If a raised level triggered IRQ enabled then mark
                    is as pending.  */
                 if (GIC_TEST_LEVEL(irq + i, mask)
