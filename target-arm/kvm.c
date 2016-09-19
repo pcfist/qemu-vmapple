@@ -526,6 +526,13 @@ void kvm_arch_pre_run(CPUState *cs, struct kvm_run *run)
 
 MemTxAttrs kvm_arch_post_run(CPUState *cs, struct kvm_run *run)
 {
+    /* Synchronize our internal vtimer irq line with the kvm one */
+    if (run->s.regs.kernel_timer_pending != run->s.regs.user_timer_pending) {
+        qemu_set_irq(ARM_CPU(cs)->gt_timer_outputs[GTIMER_VIRT],
+                     run->s.regs.kernel_timer_pending & KVM_ARM_TIMER_VTIMER);
+        run->s.regs.user_timer_pending = run->s.regs.kernel_timer_pending;
+    }
+
     return MEMTXATTRS_UNSPECIFIED;
 }
 
