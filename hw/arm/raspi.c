@@ -13,6 +13,8 @@
 #include "qemu-common.h"
 #include "cpu.h"
 #include "hw/arm/bcm2836.h"
+#include "hw/arm/bcm2837.h"
+#include "hw/arm/raspi_platform.h"
 #include "qemu/error-report.h"
 #include "hw/boards.h"
 #include "hw/loader.h"
@@ -28,7 +30,7 @@
 static const int raspi_boardid[] = {[1] = 0xc42, [2] = 0xc43};
 
 typedef struct RasPiState {
-    BCM2836State soc;
+    BCM283XState soc;
     MemoryRegion ram;
 } RasPiState;
 
@@ -113,7 +115,7 @@ static void setup_boot(MachineState *machine, int version, size_t ram_size)
     arm_load_kernel(ARM_CPU(first_cpu), &binfo);
 }
 
-static void raspi2_init(MachineState *machine)
+static void raspi_init(MachineState *machine, uint32_t board_rev)
 {
     RasPiState *s = g_new0(RasPiState, 1);
     uint32_t vcram_size;
@@ -122,7 +124,16 @@ static void raspi2_init(MachineState *machine)
     BusState *bus;
     DeviceState *carddev;
 
-    object_initialize(&s->soc, sizeof(s->soc), TYPE_BCM2836);
+    switch (board_rev) {
+    case RASPI_BOARD_REV_RPI2:
+        object_initialize(&s->soc, sizeof(s->soc), TYPE_BCM2836);
+        break;
+    case RASPI_BOARD_REV_RPI3:
+        object_initialize(&s->soc, sizeof(s->soc), TYPE_BCM2837);
+        break;
+    default:
+        g_assert_not_reached();
+    }
     object_property_add_child(OBJECT(machine), "soc", OBJECT(&s->soc),
                               &error_abort);
 
@@ -137,7 +148,7 @@ static void raspi2_init(MachineState *machine)
                                    &error_abort);
     object_property_set_int(OBJECT(&s->soc), smp_cpus, "enabled-cpus",
                             &error_abort);
-    object_property_set_int(OBJECT(&s->soc), 0xa21041, "board-rev",
+    object_property_set_int(OBJECT(&s->soc), board_rev, "board-rev",
                             &error_abort);
     object_property_set_bool(OBJECT(&s->soc), true, "realized", &error_abort);
 
@@ -158,6 +169,16 @@ static void raspi2_init(MachineState *machine)
     setup_boot(machine, 2, machine->ram_size - vcram_size);
 }
 
+static void raspi2_init(MachineState *machine)
+{
+    raspi_init(machine, RASPI_BOARD_REV_RPI2);
+}
+
+static void raspi3_init(MachineState *machine)
+{
+    raspi_init(machine, RASPI_BOARD_REV_RPI3);
+}
+
 static void raspi2_machine_init(MachineClass *mc)
 {
     mc->desc = "Raspberry Pi 2";
@@ -170,3 +191,16 @@ static void raspi2_machine_init(MachineClass *mc)
     mc->default_ram_size = 1024 * 1024 * 1024;
 };
 DEFINE_MACHINE("raspi2", raspi2_machine_init)
+
+static void raspi3_machine_init(MachineClass *mc)
+{
+    mc->desc = "Raspberry Pi 3";
+    mc->init = raspi3_init;
+    mc->block_default_type = IF_SD;
+    mc->no_parallel = 1;
+    mc->no_floppy = 1;
+    mc->no_cdrom = 1;
+    mc->max_cpus = BCM2837_NCPUS;
+    mc->default_ram_size = 1024 * 1024 * 1024;
+};
+DEFINE_MACHINE("raspi3", raspi3_machine_init)

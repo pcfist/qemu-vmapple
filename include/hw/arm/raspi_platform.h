@@ -126,3 +126,7 @@
 #define INTERRUPT_VPU1_HALTED          5
 #define INTERRUPT_ILLEGAL_TYPE0        6
 #define INTERRUPT_ILLEGAL_TYPE1        7
+
+/* Board Revision magic numbers for different boards */
+#define RASPI_BOARD_REV_RPI2           0xa21041
+#define RASPI_BOARD_REV_RPI3           0xa22082

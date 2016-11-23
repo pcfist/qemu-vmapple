@@ -12,27 +12,27 @@
 #include "qapi/error.h"
 #include "qemu-common.h"
 #include "cpu.h"
-#include "hw/arm/bcm2836.h"
+#include "hw/arm/bcm2837.h"
 #include "hw/arm/raspi_platform.h"
 #include "hw/sysbus.h"
 #include "exec/address-spaces.h"
 
-static void bcm2836_class_init(ObjectClass *oc, void *data)
+static void bcm2837_class_init(ObjectClass *oc, void *data)
 {
     BCM283XClass *bc = BCM283X_CLASS(oc);
 
-    bc->cpu_type = "cortex-a15-" TYPE_ARM_CPU;
+    bc->cpu_type = "cortex-a53-" TYPE_ARM_CPU;
 }
 
-static const TypeInfo bcm2836_type_info = {
-    .name = TYPE_BCM2836,
+static const TypeInfo bcm2837_type_info = {
+    .name = TYPE_BCM2837,
     .parent = TYPE_BCM283X,
-    .class_init = bcm2836_class_init,
+    .class_init = bcm2837_class_init,
 };
 
-static void bcm2836_register_types(void)
+static void bcm2837_register_types(void)
 {
-    type_register_static(&bcm2836_type_info);
+    type_register_static(&bcm2837_type_info);
 }
 
-type_init(bcm2836_register_types)
+type_init(bcm2837_register_types)

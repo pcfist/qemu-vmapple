@@ -5,15 +5,17 @@
  * Rasperry Pi 2 emulation and refactoring Copyright (c) 2015, Microsoft
  * Written by Andrew Baumann
  *
+ * Rasperry Pi 3 emulation (c) Alexander Graf <agraf@suse.de>
+ *
  * This code is licensed under the GNU GPLv2 and later.
  */
 
-#ifndef BCM2836_H
-#define BCM2836_H
+#ifndef BCM2837_H
+#define BCM2837_H
 
 #include "hw/arm/bcm283x.h"
 
-#define TYPE_BCM2836 "bcm2836"
-#define BCM2836_NCPUS 4
+#define TYPE_BCM2837 "bcm2837"
+#define BCM2837_NCPUS 4
 
-#endif /* BCM2836_H */
+#endif /* BCM2837_H */
