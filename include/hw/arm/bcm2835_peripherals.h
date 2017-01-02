@@ -20,6 +20,7 @@
 #include "hw/intc/bcm2835_ic.h"
 #include "hw/misc/bcm2835_property.h"
 #include "hw/misc/bcm2835_mbox.h"
+#include "hw/gpio/bcm2835_gpio.h"
 #include "hw/sd/sdhci.h"
 
 #define TYPE_BCM2835_PERIPHERALS "bcm2835-peripherals"
@@ -35,6 +36,7 @@ typedef struct BCM2835PeripheralState {
     MemoryRegion ram_alias[4];
     qemu_irq irq, fiq;
 
+    BCM2835GPIOState gpio;
     SysBusDevice *uart0;
     BCM2835AuxState aux;
     BCM2835FBState fb;

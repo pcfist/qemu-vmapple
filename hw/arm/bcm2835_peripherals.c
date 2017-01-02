@@ -46,6 +46,11 @@ static void bcm2835_peripherals_init(Object *obj)
     object_property_add_child(obj, "ic", OBJECT(&s->ic), NULL);
     qdev_set_parent_bus(DEVICE(&s->ic), sysbus_get_default());
 
+    /* GPIO (pinmux) */
+    object_initialize(&s->gpio, sizeof(s->gpio), TYPE_BCM2835_GPIO);
+    object_property_add_child(obj, "gpio", OBJECT(&s->gpio), NULL);
+    qdev_set_parent_bus(DEVICE(&s->gpio), sysbus_get_default());
+
     /* UART0 */
     s->uart0 = SYS_BUS_DEVICE(object_new("pl011"));
     object_property_add_child(obj, "uart0", OBJECT(s->uart0), NULL);
@@ -106,7 +111,7 @@ static void bcm2835_peripherals_realize(DeviceState *dev, Error **errp)
     Object *obj;
     MemoryRegion *ram;
     Error *err = NULL;
-    uint32_t ram_size, vcram_size;
+    uint32_t ram_size, vcram_size, board_rev;
     int n;
 
     obj = object_property_get_link(OBJECT(dev), "ram", &err);
@@ -145,6 +150,63 @@ static void bcm2835_peripherals_realize(DeviceState *dev, Error **errp)
     memory_region_add_subregion(&s->peri_mr, ARMCTRL_IC_OFFSET,
                 sysbus_mmio_get_region(SYS_BUS_DEVICE(&s->ic), 0));
     sysbus_pass_irq(SYS_BUS_DEVICE(s), SYS_BUS_DEVICE(&s->ic));
+
+    /* GPIO (pinmux) */
+    board_rev = object_property_get_int(OBJECT(s), "board-rev", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
+
+    switch (board_rev) {
+    case RASPI_BOARD_REV_RPI3:
+        /* Extracted from RPi3 */
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio14-mode", BCM2835_GPIO_ALT5);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio15-mode", BCM2835_GPIO_ALT5);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio40-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio41-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio42-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio43-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio46-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio47-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio48-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio49-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio50-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio51-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio52-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio53-mode", BCM2835_GPIO_ALT3);
+        break;
+    case RASPI_BOARD_REV_RPI2:
+    default:
+        /* Extracted from RPi2 */
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio14-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio15-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio31-mode", BCM2835_GPIO_OUTPUT);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio32-mode", BCM2835_GPIO_OUTPUT);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio38-mode", BCM2835_GPIO_OUTPUT);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio40-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio41-mode", BCM2835_GPIO_OUTPUT);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio44-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio44-mode", BCM2835_GPIO_ALT0);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio47-mode", BCM2835_GPIO_OUTPUT);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio48-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio49-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio50-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio51-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio52-mode", BCM2835_GPIO_ALT3);
+        qdev_prop_set_uint32(DEVICE(&s->gpio), "gpio53-mode", BCM2835_GPIO_ALT3);
+        break;
+    }
+
+    object_property_set_bool(OBJECT(&s->gpio), true, "realized", &err);
+    if (err) {
+        error_propagate(errp, err);
+        return;
+    }
+
+    memory_region_add_subregion(&s->peri_mr, GPIO_OFFSET,
+                sysbus_mmio_get_region(SYS_BUS_DEVICE(&s->gpio), 0));
+    /* XXX IRQs */
 
     /* UART0 */
     qdev_prop_set_chr(DEVICE(s->uart0), "chardev", serial_hds[0]);
