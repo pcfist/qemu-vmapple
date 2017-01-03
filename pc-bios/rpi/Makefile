@@ -14,7 +14,8 @@ QEMU_CFLAGS := $(filter -W%, $(QEMU_CFLAGS))
 QEMU_CFLAGS += -ffreestanding -fno-delete-null-pointer-checks
 QEMU_CFLAGS += -fPIE -fno-strict-aliasing
 QEMU_CFLAGS += $(call cc-option, $(QEMU_CFLAGS), -fno-stack-protector)
-LDFLAGS += -Wl,--section-start=.text=0x10000000 -nostdlib
+QEMU_CFLAGS += -flto
+LDFLAGS += -Wl,--section-start=.text=0x10000000 -nostdlib -flto
 
 build-all: rpi-aa64.img
 
