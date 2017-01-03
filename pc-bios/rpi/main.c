@@ -14,10 +14,22 @@ char stack[PAGE_SIZE * 8] __attribute__((__aligned__(PAGE_SIZE)));
 
 void __attribute__ ((noreturn)) panic(const char *string)
 {
+    print(string);
     while (1) { }
 }
 
 int main(void)
 {
+    struct block_device *sd;
+    char buf[512];
+    int r, i;
+
+    assert(!sd_card_init(&sd));
+    r = sd_read(sd, (void*)buf, sizeof(buf), 0);
+    printf("sd_read: %d -> ", r);
+    for (i = 0; i < sizeof(buf); i++) {
+        printf("%02x", buf[i]);
+    }
+    printf("\n");
     panic("Failed to load OS from SD Card\n");
 }

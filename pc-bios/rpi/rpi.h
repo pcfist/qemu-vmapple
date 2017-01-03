@@ -48,7 +48,22 @@ void panic(const char *string);
 extern char stack[PAGE_SIZE * 8] __attribute__((__aligned__(PAGE_SIZE)));
 
 /* uart.c */
+void putc(const char c);
 void print(const char *s);
+
+/* printf.c */
+void printf(const char *fmt, ...);
+void sprintf(char *buffer, const char *fmt, ...);
+
+/* emmc.c */
+struct block_device {
+    const char *driver_name;
+    const char *device_name;
+    uint32_t block_size;
+};
+int sd_card_init(struct block_device **dev);
+int sd_read(struct block_device *, uint8_t *, size_t buf_size, uint32_t);
+int sd_write(struct block_device *, uint8_t *, size_t buf_size, uint32_t);
 
 /* helpers */
 static inline void *memset(void *s, int c, size_t n)
@@ -115,5 +130,7 @@ static inline void *memcpy(void *s1, const void *s2, size_t n)
     }
     return s1;
 }
+
+#define assert(c) if (!c) panic("assert\n")
 
 #endif /* RPI_H */

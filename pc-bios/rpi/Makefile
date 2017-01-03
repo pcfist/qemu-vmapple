@@ -9,13 +9,13 @@ $(call set-vpath, $(SRC_PATH)/pc-bios/rpi)
 
 .PHONY : all clean build-all
 
-OBJECTS = start.o main.o uart.o
+OBJECTS = start.o main.o uart.o printf.o emmc.o timer.o
 QEMU_CFLAGS := $(filter -W%, $(QEMU_CFLAGS))
 QEMU_CFLAGS += -ffreestanding -fno-delete-null-pointer-checks
 QEMU_CFLAGS += -fPIE -fno-strict-aliasing
 QEMU_CFLAGS += $(call cc-option, $(QEMU_CFLAGS), -fno-stack-protector)
-QEMU_CFLAGS += -flto
-LDFLAGS += -Wl,--section-start=.text=0x10000000 -nostdlib -flto
+QEMU_CFLAGS += -flto -fno-builtin
+LDFLAGS += -Wl,--section-start=.text=0x10000000 -nostdlib -flto -fno-builtin
 
 build-all: rpi-aa64.img
 
