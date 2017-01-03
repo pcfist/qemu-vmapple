@@ -1,5 +1,5 @@
 /*
- * First stage boot loader for Raspberry Pi.
+ * Raspberry Pi QEMU firmware
  *
  * Copyright (c) 2017 Alexander Graf <agraf@suse.de>
  *
@@ -8,9 +8,9 @@
  * directory.
  */
 
-        .globl _start
-_start:
+#include "rpi.h"
 
-adr	x1, stack + 0x8000      /* Set up stack */
-mov	sp, x1
-b	main                    /* And call C */
+void print(const char *s)
+{
+    panic("No UART implemented yet\n");
+}

@@ -9,9 +9,9 @@ $(call set-vpath, $(SRC_PATH)/pc-bios/rpi)
 
 .PHONY : all clean build-all
 
-OBJECTS = start.o main.o
+OBJECTS = start.o main.o uart.o
 QEMU_CFLAGS := $(filter -W%, $(QEMU_CFLAGS))
-QEMU_CFLAGS += -ffreestanding -fno-delete-null-pointer-checks -msoft-float
+QEMU_CFLAGS += -ffreestanding -fno-delete-null-pointer-checks
 QEMU_CFLAGS += -fPIE -fno-strict-aliasing
 QEMU_CFLAGS += $(call cc-option, $(QEMU_CFLAGS), -fno-stack-protector)
 LDFLAGS += -Wl,--section-start=.text=0x10000000 -nostdlib
