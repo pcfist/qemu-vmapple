@@ -23,6 +23,8 @@ import os
 import argparse
 import collections
 import pprint
+from inspect import currentframe, getframeinfo
+import traceback
 
 def mkdir_p(path):
     try:
@@ -33,7 +35,7 @@ def mkdir_p(path):
 class MigrationFile(object):
     def __init__(self, filename):
         self.filename = filename
-        self.file = open(self.filename, "rb")
+        self.file = open(self.filename, "rb", buffering=0)
 
     def read64(self):
         return np.asscalar(np.fromfile(self.file, count=1, dtype='>i8')[0])
@@ -82,7 +84,7 @@ class MigrationFile(object):
         datapos = self.file.tell()
         data = self.file.read()
         # The full file read closed the file as well, reopen it
-        self.file = open(self.filename, "rb")
+        self.file = open(self.filename, "rb", buffering=0)
 
         # Find the last NULL byte, then the first brace after that. This should
         # be the beginning of our JSON data.
@@ -437,6 +439,241 @@ class VMSDFieldStruct(VMSDFieldGeneric):
     def getDict(self):
         return self.getDictOrderedDict(self.data)
 
+class VMSDFieldVirtio(VMSDFieldGeneric):
+    VIRTIO_TYPE_BLK    = 0
+    VIRTIO_TYPE_NET    = 1
+    VIRTIO_TYPE_SERIAL = 2
+
+    VIRTIO_NET_F_CTRL_GUEST_OFFLOADS = 2
+
+    QEMU_VM_SUBSECTION    = 0x05
+
+    def __init__(self, desc, file):
+        super(VMSDFieldVirtio, self).__init__(desc, file)
+        self.data = collections.OrderedDict()
+
+    def __repr__(self):
+        return self.data.__repr__()
+
+    def __str__(self):
+        return self.data.__str__()
+
+    def getDict(self):
+        return self.data
+
+    def readvar(self, len):
+        d = self.file.readvar(len)
+        return " ".join("{0:02x}".format(ord(c)) for c in d)
+
+    def has_feature(self, feature):
+        return self.data["features"] & (1 << feature)
+
+    def read_vq_mod(self):
+        vq = collections.OrderedDict()
+
+        vq["num"] = self.file.read16()
+        vq["unused"] = self.file.read8()
+        vq["enabled"] = self.file.read8()
+        vq["desc"] = [ self.file.read32() for i in xrange(0, 2) ]
+        vq["avail"] = [ self.file.read32() for i in xrange(0, 2) ]
+        vq["used"] = [ self.file.read32() for i in xrange(0, 2) ]
+
+        return vq
+
+    def read_vq_elem(self):
+        vq = collections.OrderedDict()
+
+        # XXX native host endianness :(
+        vq["index"] = self.file.read32()
+        vq["out_num"] = self.file.read32()
+        vq["in_num"] = self.file.read32()
+        vq["in_addr"] = [file.read64() for i in xrange(0, 1024)]
+        vq["out_addr"] = [file.read64() for i in xrange(0, 1024)]
+        vq["in_sg"] = collections.OrderedDict()
+        for i in xrange(0, 1024):
+            vq["in_sg"][i] = collections.OrderedDict()
+            cvq = vq["in_sg"][i]
+            cvq["base"] = self.file.read64()
+            cvq["len"] = self.file.read64()
+        vq["out_sg"] = collections.OrderedDict()
+        for i in xrange(0, 1024):
+            vq["out_sg"][i] = collections.OrderedDict()
+            cvq = vq["out_sg"][i]
+            cvq["base"] = self.file.read64()
+            cvq["len"] = self.file.read64()
+
+        return vq
+
+    def read_variant(self, has_vring_adjust_align = False, irq_vectors = 3, has_pci = True, has_pcie = False, virtio_type = VIRTIO_TYPE_NET):
+
+        if has_pci or has_pcie:
+            self.data["pci_dev"] = collections.OrderedDict()
+            pd = self.data["pci_dev"]
+            pd["version_id"] = self.file.read32() # VMSDFieldIntLE(self.desc, self.file).read()
+            if has_pcie:
+                pd["config"] = self.readvar(0x1000)
+            else:
+                pd["config"] = self.readvar(0x100)
+            pd["irq_state"] = [ self.file.read32() for i in xrange(0,4) ]
+            if irq_vectors > 0:
+                pd["msix_table"] = self.readvar(irq_vectors * 16)
+                pd["msix_pba"] = self.readvar((irq_vectors + 7) / 8)
+                pd["config_vector"] = self.file.read16()
+                
+        # XXX non-PCI buses load_config()
+
+        self.data["status"] = self.file.read8()
+        self.data["isr"] = self.file.read8()
+        self.data["queue_sel"] = self.file.read16()
+        self.data["features"] = self.file.read32()
+
+        config_len = self.file.read32()
+        self.data["config"] = self.readvar(config_len)
+
+        num_vqs = self.file.read32()
+        self.data["vq"] = collections.OrderedDict()
+        for i in xrange(0, num_vqs):
+            self.data["vq"][i] = collections.OrderedDict()
+            vq = self.data["vq"][i]
+            vq["vring.num"] = self.file.read32()
+            if has_vring_adjust_align:
+                vq["vring.align"] = self.file.read32()
+            vq["vring.desc"] = self.file.read64()
+            vq["last_avail_idx"] = self.file.read16()
+            if irq_vectors > 0:
+                vq["irq_vector"] = self.file.read16()
+
+        # vdc->load()
+
+        if virtio_type == self.VIRTIO_TYPE_BLK:
+            self.data["vq_elem"] = collections.OrderedDict()
+            while self.file.read8() == 1:
+                if num_vqs > 1:
+                    cur_vq = self.file.read32()
+                else:
+                    cur_vq = 0
+
+                self.data["vq_elem"][cur_vq] = self.read_vq_elem()
+
+        elif virtio_type == self.VIRTIO_TYPE_SERIAL:
+            # unused fields
+            self.data["unused_cols"] = self.file.read16()
+            self.data["unused_rows"] = self.file.read16()
+            max_nr_ports = self.file.read32()
+            self.data["unused_max_nr_ports"] = max_nr_ports
+            for i in xrange(0, (max_nr_ports + 31) / 32):
+                self.data["ports_map[%d]" % i] = self.file.read32()
+            nr_active_ports = self.file.read32()
+            self.data["nr_active_ports"] = nr_active_ports
+            for i in xrange(0, nr_active_ports):
+                port = collections.OrderedDict()
+                self.data["port[%d]" % i] = port
+                port["id"] = self.file.read32()
+                port["guest_connected"] = self.file.read8()
+                port["host_connected"] = self.file.read8()
+                port["elem_popped"] = self.file.read8()
+                if elem_popped > 1:
+                    raise Exception("invalid elem_popped element")
+                elif elem_popped == 1:
+                    port["iov_idx"] = self.file.read32()
+                    port["iov_offset"] = self.file.read64()
+                    port["vq_elem"] = self.read_vq_elem()
+
+        # vdc->vmsd
+
+        if virtio_type == self.VIRTIO_TYPE_NET:
+            net = collections.OrderedDict()
+            self.data["net"] = net
+            net["mac"] = self.readvar(6)
+            net["tx_waiting"] = self.file.read32()
+            net["mergeable_rx_bufs"] = self.file.read32()
+            net["status"] = self.file.read16()
+            net["promisc"] = self.file.read8()
+            net["allmulti"] = self.file.read8()
+            in_use = self.file.read32()
+            net["mac_table.in_use"] = in_use
+            net["mac_table"] = [ self.readvar(6) for i in xrange(0, in_use) ]
+            net["vlans"] = self.readvar((1 << 12) >> 3)
+            net["has_vnet_hdr"] = self.file.read32()
+            net["mac_table.multi_overflow"] = self.file.read8()
+            net["mac_table.uni_overflow"] = self.file.read8()
+            net["alluni"] = self.file.read8()
+            net["nomulti"] = self.file.read8()
+            net["nouni"] = self.file.read8()
+            net["nobcast"] = self.file.read8()
+            net["has_ufo"] = self.file.read8()
+            if irq_vectors > 3:
+                net["max_queues"] = self.file.read16()
+                net["curr_queues"] = self.file.read16()
+                for i in xrange(1, net["curr_queues"]):
+                    net["tx_waiting[%d]" % i] = self.file.read32()
+            if self.has_feature(self.VIRTIO_NET_F_CTRL_GUEST_OFFLOADS):
+                net["curr_guest_offloads"] = self.file.read64()
+
+        # XXX vmsd of other types
+
+        # Virtio subsections
+
+        while True:
+            pos = self.file.file.tell()
+            if self.file.read8() != self.QEMU_VM_SUBSECTION:
+                self.file.file.seek(pos, os.SEEK_SET)
+                break
+
+            name = self.file.readstr()
+            version_id = self.file.read32()
+
+            if version_id != 1:
+                raise Exception("Invalid subsection version")
+
+            if name == "virtio/device_endian":
+                self.data["device_endian"] = self.file.read8()
+            elif name == "virtio/64bit_features":
+                self.data["guest_features"] = self.file.read64()
+            elif name == "virtio/broken":
+                self.data["broken"] = self.file.read8()
+            elif name == "virtio/virtqueues":
+                for i in xrange(0, 1024):
+                    vring_avail = self.file.read64()
+                    vring_used = self.file.read64()
+                    if self.data["vq"].has_key(i):
+                        self.data["vq"][i]["vring.avail"] = vring_avail
+                        self.data["vq"][i]["vring.used"] = vring_used
+            elif name == "virtio/ringsize":
+                for i in xrange(0, 1024):
+                    num_default = self.file.read32()
+                    if self.data["vq"].has_key(i):
+                        self.data["vq"][i]["vring.num_default"] = num_default
+            elif name == "virtio/extra_state":
+                ""
+            elif name == "virtio_pci/modern_state":
+                mod = collections.OrderedDict()
+                mod["dfselect"] = self.file.read32()
+                mod["gfselect"] = self.file.read32()
+                mod["guest_features"] = [ self.file.read32() for i in xrange(0, 2) ]
+                mod["vq"] = [ self.read_vq_mod() for i in xrange(0, 1024) ]
+
+        return self.data
+
+    def read(self):
+        pos = self.file.tell()
+        print "pos before: %d" % pos
+        try:
+            self.read_variant()
+        except Exception as e:
+            print "Virtio read error at %d: %s" % (self.file.tell(), e)
+            traceback.print_exc()
+            self.file.file.seek(pos, os.SEEK_SET)
+        print "pos after: %d" % self.file.tell()
+        remainder = self.desc['size'] - (self.file.tell() - pos)
+        print "remainder: %d" % remainder
+        rest = self.file.readvar(remainder)
+        rest = " ".join("{0:02x}".format(ord(c)) for c in rest)
+        self.data["rest"] = rest
+        print "rest: %s" % rest
+
+        return self.data
+
 vmsd_field_readers = {
     "bool" : VMSDFieldBool,
     "int8" : VMSDFieldInt,
@@ -459,6 +696,7 @@ vmsd_field_readers = {
     "unused_buffer" : VMSDFieldGeneric,
     "bitmap" : VMSDFieldGeneric,
     "struct" : VMSDFieldStruct,
+    "virtio" : VMSDFieldVirtio,
     "unknown" : VMSDFieldGeneric,
 }
 
