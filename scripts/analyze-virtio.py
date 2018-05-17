@@ -39,6 +39,8 @@ class VirtIOFile:
 
     def __init__(self, filename, offset):
         self.file = open(filename, "rb")
+        if offset > 0xc0000000:
+            offset -= 0x40000000
         self.file.seek(offset, os.SEEK_SET)
 
 class VirtQueueElement:
@@ -50,7 +52,21 @@ class VirtQueueElement:
     def read(self):
         self.data["addr"] = hex(self.file.read64())
         self.data["len"] = hex(self.file.read32())
-        self.data["flags"] = hex(self.file.read16())
+
+        desc_flags = self.file.read16()
+        flags = [ ]
+        if desc_flags & 1:
+            flags.append("VRING_DESC_F_NEXT")
+            desc_flags &= ~1
+        if desc_flags & 2:
+            flags.append("VRING_DESC_F_WRITE")
+            desc_flags &= ~2
+        if desc_flags & 4:
+            flags.append("VRING_DESC_F_INDIRECT")
+            desc_flags &= ~4
+        if desc_flags > 0:
+            flags.append(hex(desc_flags))
+        self.data["flags"] = flags
         self.data["next"] = hex(self.file.read16())
 
         return self.data
@@ -71,27 +87,53 @@ class VirtQueue:
         self.data['used'] = collections.OrderedDict()
 
         for i in xrange(0, num):
-            self.data['buffers'][i] = VirtQueueElement(self.file).read()
+            self.data['buffers'][hex(i)] = VirtQueueElement(self.file).read()
 
-        self.data['available']['flags'] = hex(self.file.read16())
-        self.data['available']['index'] = hex(self.file.read16())
-        ring = [ self.file.read16() for i in xrange(0, num) ]
-        self.data['available']['ring'] = " ".join("{0:02x}".format(c) for c in ring)
+        avail_flags = self.file.read16()
+        flags = [ ]
+        if avail_flags & 1:
+            flags.append("VRING_AVAIL_F_NO_INTERRUPT")
+            avail_flags &= ~1
+        if avail_flags > 0:
+            flags.append(hex(avail_flags))
+
+        self.data['available']['flags'] = flags
+        idx = self.file.read16()
+        self.data['available']['index'] = hex(idx)
+
+        self.data['available']['ring'] = collections.OrderedDict()
+        ring = self.data['available']['ring']
+        for i in xrange(0, num):
+            ring[hex(i)] = collections.OrderedDict()
+            ring[hex(i)]['index'] = hex(self.file.read16())
+            if i == (idx % num):
+                ring[hex(i)]['current'] = True
         self.data['available']['irq_index'] = hex(self.file.read16())
 
         pos = self.file.file.tell()
         print "old pos: %x" % pos
-        self.file.file.seek((pos + 4095) & ~4095)
+        self.file.file.seek((pos + 0x3f) & ~0x3f)
         print "new pos: %x" % self.file.file.tell()
 
-        self.data['used']['flags'] = hex(self.file.read16())
-        self.data['used']['index'] = hex(self.file.read16())
+        used_flags = self.file.read16()
+        flags = [ ]
+        if used_flags & 1:
+            flags.append("VRING_USED_F_NO_NOTIFY")
+            used_flags &= ~1
+        if used_flags > 0:
+            flags.append(hex(used_flags))
+
+        self.data['used']['flags'] = flags
+        idx = self.file.read16()
+        self.data['used']['index'] = hex(idx)
         self.data['used']['ring'] = collections.OrderedDict()
         ring = self.data['used']['ring']
         for i in xrange(0, num):
-            ring[i] = collections.OrderedDict()
-            ring[i]['index'] = hex(self.file.read32())
-            ring[i]['len'] = hex(self.file.read32())
+            ring[hex(i)] = collections.OrderedDict()
+            ring[hex(i)]['index'] = hex(self.file.read32())
+            ring[hex(i)]['len'] = hex(self.file.read32())
+            if i == (idx % num):
+                ring[hex(i)]['current'] = True
         self.data['used']['irq_index'] = hex(self.file.read16())
 
     def __repr__(self):
