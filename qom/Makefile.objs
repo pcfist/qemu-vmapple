@@ -1,4 +1,6 @@
 qom-obj-y = object.o container.o qom-qobject.o
 qom-obj-y += object_interfaces.o
 
+ifndef TARGET_HWEMU
 common-obj-y = cpu.o
+endif

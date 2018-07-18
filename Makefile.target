@@ -94,6 +94,8 @@ all: $(PROGS) stap
 # Dummy command so that make thinks it has done something
 	@true
 
+ifndef TARGET_HWEMU
+
 #########################################################
 # cpu emulator library
 obj-y += exec.o
@@ -106,6 +108,8 @@ obj-$(CONFIG_TCG) += fpu/softfloat.o
 obj-y += target/$(TARGET_BASE_ARCH)/
 obj-y += disas.o
 obj-$(call notempty,$(TARGET_XML_FILES)) += gdbstub-xml.o
+
+endif #CONFIG_HWEMU
 
 #########################################################
 # Linux user emulator target
@@ -157,6 +161,17 @@ endif
 GENERATED_FILES += hmp-commands.h hmp-commands-info.h
 
 endif # CONFIG_SOFTMMU
+
+#########################################################
+# SD Card emulation target
+
+ifdef CONFIG_SDCARD
+
+QEMU_CFLAGS+=-I$(SRC_PATH)/sdcard
+
+obj-y += sdcard/
+
+endif #CONFIG_SDCARD
 
 # Workaround for http://gcc.gnu.org/PR55489, see configure.
 %/translate.o: QEMU_CFLAGS += $(TRANSLATE_OPT_CFLAGS)

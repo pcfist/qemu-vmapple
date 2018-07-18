@@ -254,7 +254,7 @@ supported_target() {
                 return 1
             fi
             ;;
-        sdcard)
+        *-sdcard)
             ;;
         *)
             print_error "Invalid target name '$target'"
@@ -1538,7 +1538,7 @@ if [ "$bsd_user" = "yes" ]; then
     mak_wilds="${mak_wilds} $source_path/default-configs/*-bsd-user.mak"
 fi
 if [ "$sdcard" = "yes" ]; then
-    mak_wilds="${mak_wilds} $source_path/default-configs/sdcard.mak"
+    mak_wilds="${mak_wilds} $source_path/default-configs/hwemu-sdcard.mak"
 fi
 
 for config in $mak_wilds; do
@@ -6910,9 +6910,8 @@ case "$target" in
     target_user_only="yes"
     target_bsd_user="yes"
     ;;
-  sdcard)
+  hwemu-sdcard)
     target_sdcard="yes"
-    target_name="${cpu}"
     ;;
   *)
     error_exit "Target '$target' not recognised"
@@ -6974,6 +6973,9 @@ case "$target_name" in
   hppa)
     mttcg="yes"
     target_compiler=$cross_cc_hppa
+  ;;
+  hwemu)
+    # No CPU emulation needed
   ;;
   lm32)
     target_compiler=$cross_cc_lm32
