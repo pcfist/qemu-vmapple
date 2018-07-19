@@ -127,7 +127,7 @@ static void *sdcard_proxy(void *opaque)
         if (sts & SDCARD_STATUS_NEW) {
             SDRequest req;
 
-            printf("New Command: %08x\n", sts);
+//            printf("New Command: %08x\n", sts);
 
             req.cmd = (sts & SDCARD_STATUS_CMD_MASK)
                           >> SDCARD_STATUS_CMD_SHIFT;
