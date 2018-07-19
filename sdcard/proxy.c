@@ -54,6 +54,9 @@ static void *sdcard_proxy(void *opaque)
         return NULL;
     }
 
+    /* Enable command reads */
+    sdctl_writel(SDCARD_CTRL_EN, SDCARD_REG_CTRL);
+
     while (1) {
         uint32_t sts;
 
