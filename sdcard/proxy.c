@@ -61,7 +61,7 @@ static void sdcard_newcmd(SDRequest *request)
         /* fall through */
     case 4:
         sdctl_writel(ldl_be_p(response), SDCARD_REG_ARG);
-        sdctl_writel(SDCARD_CTRL_EN | SDCARD_CTRL_SEND |
+        sdctl_writel(SDCARD_CTRL_EN | SDCARD_CTRL_SEND | SDCARD_CTRL_AUTOCRC7 |
                      (cmd << SDCARD_CTRL_CMD_SHIFT), SDCARD_REG_CTRL);
         break;
     default:
