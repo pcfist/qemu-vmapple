@@ -35,6 +35,7 @@
 
 #include "hw/sd/sd.h"
 #include "qapi/error.h"
+#include "qemu/main-loop.h"
 
 #define SECTOR_SIZE 512
 
@@ -192,10 +193,17 @@ static int sdcard_init(char *filename)
 
 int main(int argc, char **argv)
 {
+    Error *err = NULL;
+
     module_call_init(MODULE_INIT_TRACE);
     module_call_init(MODULE_INIT_QOM);
 
     /* XXX MODULE_INIT_OPTS */
+
+    if (qemu_init_main_loop(&err)) {
+        error_report_err(err);
+        return 1;
+    }
 
     if (sdcard_init(argv[1])) {
         printf("Failed to initialize SD emulation\n");
