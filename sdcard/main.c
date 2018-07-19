@@ -227,7 +227,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (open_file(argv[1])) {
+    if (argc > 1 && open_file(argv[1])) {
         printf("Unable to open file '%s'\n", argv[1]);
         return 1;
     }
