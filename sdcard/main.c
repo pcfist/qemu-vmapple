@@ -38,11 +38,11 @@
 
 #define SECTOR_SIZE 512
 
+/* XXX move to blk backend */
 static void *sdcard_map;
 
-static SDBus sdbus;
-
-int fd;
+/* XXX remove */
+static int fd;
 
 static void benchmark_sdctl(void)
 {

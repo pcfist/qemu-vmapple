@@ -13,13 +13,16 @@
 #include "qemu/osdep.h"
 #include "qemu-common.h"
 #include "qemu/thread.h"
-#include <pthread.h>
+
 #include "fast.h"
 #include "uio.h"
 #include "proxy.h"
 
+#include <pthread.h>
+
 static QemuThread thread;
 static void *sdctl_map;
+SDBus sdbus;
 
 static int sdcard_set_affinity(void)
 {
@@ -43,6 +46,28 @@ static uint32_t sdctl_writel(uint32_t val, int reg)
     return writel(val, (uint32_t*)(sdctl_map + reg));
 }
 
+static void sdcard_newcmd(SDRequest *request)
+{
+    int rsplen;
+    uint8_t response[16];
+    uint32_t cmd = request->cmd & ~SDCARD_CMD_HOST2CARD;
+
+    rsplen = sdbus_do_command(&sdbus, request, response);
+    switch (rsplen) {
+    case 16:
+        sdctl_writel(ldl_be_p(response + 4), SDCARD_REG_ARG2);
+        sdctl_writel(ldl_be_p(response + 8), SDCARD_REG_ARG3);
+        sdctl_writel(ldl_be_p(response + 12), SDCARD_REG_ARG4);
+        /* fall through */
+    case 4:
+        sdctl_writel(ldl_be_p(response), SDCARD_REG_ARG);
+        sdctl_writel(SDCARD_CTRL_EN | SDCARD_CTRL_SEND |
+                     (cmd << SDCARD_CTRL_CMD_SHIFT), SDCARD_REG_CTRL);
+    default:
+        printf("CMD%d failed (%d)\n", cmd, rsplen);
+    }
+}
+
 static void *sdcard_proxy(void *opaque)
 {
     /* Make sure we're running on the realtime CPU */
@@ -63,12 +88,23 @@ static void *sdcard_proxy(void *opaque)
         sts = sdctl_readl(SDCARD_REG_STATUS);
 
         if (sts & SDCARD_STATUS_NEW) {
+            SDRequest req;
+
             printf("New Command: %08x\n", sts);
+
+            req.cmd = (sts & SDCARD_STATUS_CMD_MASK)
+                          >> SDCARD_STATUS_CMD_SHIFT;
+            req.arg = sdctl_readl(SDCARD_REG_ARG);
+            req.crc = (sts & SDCARD_STATUS_CRC7_MASK
+                          >> SDCARD_STATUS_CRC7_SHIFT);
+
+            sdcard_newcmd(&req);
+
             sdctl_writel(SDCARD_STATUS_NEW, SDCARD_REG_STATUS);
         }
 
         if (sts & SDCARD_STATUS_TRANSIT) {
-            printf("Command in flight: %08x\n", sts);
+            //printf("Command in flight: %08x\n", sts);
         }
 
         if (sts & SDCARD_STATUS_COMP) {

@@ -6,6 +6,13 @@
  * SPDX-License-Identifier: GPL-2.0
  */
 
+#ifndef SDCARD_PROXY_H
+#define SDCARD_PROXY_H
+
+#include "qemu/osdep.h"
+#include "qemu-common.h"
+#include "hw/sd/sd.h"
+
 int proxy_init(void);
 
 
@@ -54,13 +61,19 @@ int proxy_init(void);
  *
  */
 
+#define SDCARD_CMD_HOST2CARD		0x80
+
 #define SDCARD_REG_CTRL			0x00
 #define SDCARD_CTRL_EN			(1 << 0)
 #define SDCARD_CTRL_SEND		(1 << 1)
 #define SDCARD_CTRL_136BIT		(1 << 3)
 #define SDCARD_CTRL_IRQEN_NEWCMD	(1 << 4)
 #define SDCARD_CTRL_IRQEN_REST		(1 << 5)
+#define SDCARD_CTRL_CMD_SHIFT           16
+#define SDCARD_CTRL_CMD_MASK            (0xff << SDCARD_CTRL_CMD_SHIFT)
 #define SDCARD_CTRL_AUTOCRC7		(1 << 24)
+#define SDCARD_CTRL_CRC_SHIFT           25
+#define SDCARD_CTRL_CRC_MASK            (0x7f << SDCARD_CTRL_CMD_SHIFT)
 
 #define SDCARD_REG_STATUS		0x04
 #define SDCARD_STATUS_NEW		(1 << 0)
@@ -106,3 +119,6 @@ int proxy_init(void);
 #define CRC_STATUS_CRCERROR	(0xb << SDCARD_DATCTRL_STATUS_SHIFT)
 #define CRC_STATUS_WRITEERROR	(0xd << SDCARD_DATCTRL_STATUS_SHIFT)
 
+extern SDBus sdbus;
+
+#endif
