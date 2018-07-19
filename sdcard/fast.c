@@ -9,6 +9,7 @@
 #include "fast.h"
 #include <assert.h>
 #include <stdint.h>
+#include "uio.h"
 
 volatile struct fast_queue_elem fast_queue[512];
 volatile struct fast_queue_elem *fast_head, *fast_tail;
@@ -16,11 +17,13 @@ volatile struct fast_queue_elem *fast_head, *fast_tail;
 int fast_done(volatile struct fast_queue_elem *el)
 {
     assert(fast_tail == el);
+    dmb();
     if (fast_tail == &fast_queue[ARRAY_SIZE(fast_queue) - 1]) {
         fast_tail = fast_head;
     } else {
         fast_tail++;
     }
+    dmb();
 
     return 0;
 }

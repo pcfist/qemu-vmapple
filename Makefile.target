@@ -170,6 +170,9 @@ ifdef CONFIG_SDCARD
 QEMU_CFLAGS+=-I$(SRC_PATH)/sdcard
 
 obj-y += sdcard/
+obj-y += hw/
+
+LIBS := -lutil $(LIBS)
 
 endif #CONFIG_SDCARD
 
@@ -204,6 +207,7 @@ all-obj-$(CONFIG_SOFTMMU) += $(block-obj-y) $(chardev-obj-y)
 all-obj-$(CONFIG_USER_ONLY) += $(crypto-aes-obj-y)
 all-obj-$(CONFIG_SOFTMMU) += $(crypto-obj-y)
 all-obj-$(CONFIG_SOFTMMU) += $(io-obj-y)
+all-obj-$(CONFIG_SDCARD) += $(block-obj-y) $(chardev-obj-y) $(crypto-obj-y) $(io-obj-y)
 
 $(QEMU_PROG_BUILD): config-devices.mak
 

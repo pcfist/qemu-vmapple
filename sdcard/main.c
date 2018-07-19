@@ -32,10 +32,14 @@
 #include <assert.h>
 #include <sys/time.h>
 
+#include "hw/sd/sd.h"
+#include "qapi/error.h"
+
 #define SECTOR_SIZE 512
 
 static void *sdcard_map;
-static void *sdctl_map;
+
+static SDBus sdbus;
 
 int fd;
 
@@ -167,8 +171,37 @@ static void axi_bench(void)
     printf("Benchmarked AXI: %lld usec for 100000 reads\n", (long long)(usec_after - usec_before));
 }
 
+static int sdcard_init(char *filename)
+{
+    BusState *bus;
+    DeviceState *sddev;
+
+    /* Create SD bus */
+    qbus_create_inplace(&sdbus, sizeof(sdbus),
+                        TYPE_SD_BUS, NULL, "sd-bus");
+    bus = &sdbus.qbus;
+
+    /* Create SD card device */
+    sddev = qdev_create(bus, TYPE_SD_CARD);
+    qdev_init_nofail(sddev);
+//    qdev_prop_set_drive(sddev, "drive", blk, &error_fatal);
+    object_property_set_bool(OBJECT(sddev), true, "realized", &error_fatal);
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
+    module_call_init(MODULE_INIT_TRACE);
+    module_call_init(MODULE_INIT_QOM);
+
+    /* XXX MODULE_INIT_OPTS */
+
+    if (sdcard_init(argv[1])) {
+        printf("Failed to initialize SD emulation\n");
+        return 1;
+    }
+
     if (uio_init()) {
         printf("Failed to open UIO device\n");
         return 1;
@@ -183,15 +216,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (!(sdctl_map = uio_map(1))) {
-        return 1;
-    }
-
     axi_bench();
     benchmark_sdctl();
 
-    if (fast_init())
+    if (fast_init()) {
         return 1;
+    }
 
     if (open_file(argv[1])) {
         printf("Unable to open file '%s'\n", argv[1]);

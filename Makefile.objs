@@ -89,6 +89,11 @@ qom-obj-y = qom/
 
 io-obj-y = io/
 
+ifeq ($(CONFIG_SDCARD),y)
+common-obj-y += migration/qemu-file.o
+common-obj-y += migration/vmstate-types.o
+endif
+
 ######################################################################
 # Target independent part of system emulation. The long term path is to
 # suppress *all* target specific code in case of system emulation, i.e. a
