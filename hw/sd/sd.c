@@ -1644,9 +1644,11 @@ int sd_do_command(SDState *sd, SDRequest *req,
     sd_rsp_type_t rtype;
     int rsplen;
 
+#if 0
     if (!sd->blk || !blk_is_inserted(sd->blk) || !sd->enable) {
         return 0;
     }
+#endif
 
     if (sd_req_crc_validate(req)) {
         sd->card_status |= COM_CRC_ERROR;
