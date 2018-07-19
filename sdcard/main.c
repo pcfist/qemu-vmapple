@@ -36,6 +36,8 @@
 #include "hw/sd/sd.h"
 #include "qapi/error.h"
 #include "qemu/main-loop.h"
+#include "sysemu/block-backend.h"
+
 
 #define SECTOR_SIZE 512
 
@@ -176,6 +178,7 @@ static int sdcard_init(char *filename)
 {
     BusState *bus;
     DeviceState *sddev;
+    BlockBackend *blk;
 
     /* Create SD bus */
     qbus_create_inplace(&sdbus, sizeof(sdbus),
@@ -185,7 +188,8 @@ static int sdcard_init(char *filename)
     /* Create SD card device */
     sddev = qdev_create(bus, TYPE_SD_CARD);
     qdev_init_nofail(sddev);
-//    qdev_prop_set_drive(sddev, "drive", blk, &error_fatal);
+    blk = blk_new_open(filename, NULL, NULL, BDRV_O_RDWR, &error_fatal);
+    qdev_prop_set_drive(sddev, "drive", blk, &error_fatal);
     object_property_set_bool(OBJECT(sddev), true, "realized", &error_fatal);
 
     return 0;
@@ -204,6 +208,8 @@ int main(int argc, char **argv)
         error_report_err(err);
         return 1;
     }
+    bdrv_init();
+
 
     if (sdcard_init(argv[1])) {
         printf("Failed to initialize SD emulation\n");
