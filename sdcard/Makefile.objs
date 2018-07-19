@@ -1,0 +1,7 @@
+obj-y += crc16.o
+obj-y += fast.o
+obj-y += gpio.o
+obj-y += main.o
+obj-y += proxy.o
+obj-y += stub.o
+obj-y += uio.o
