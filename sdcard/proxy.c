@@ -63,8 +63,10 @@ static void sdcard_newcmd(SDRequest *request)
         sdctl_writel(ldl_be_p(response), SDCARD_REG_ARG);
         sdctl_writel(SDCARD_CTRL_EN | SDCARD_CTRL_SEND |
                      (cmd << SDCARD_CTRL_CMD_SHIFT), SDCARD_REG_CTRL);
+        break;
     default:
         printf("CMD%d failed (%d)\n", cmd, rsplen);
+        break;
     }
 }
 
@@ -100,6 +102,7 @@ static void *sdcard_proxy(void *opaque)
 
             sdcard_newcmd(&req);
 
+            /* ACK the status register */
             sdctl_writel(SDCARD_STATUS_NEW, SDCARD_REG_STATUS);
         }
 
