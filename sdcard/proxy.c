@@ -55,10 +55,14 @@ static void sdcard_newcmd(SDRequest *request)
     rsplen = sdbus_do_command(&sdbus, request, response);
     switch (rsplen) {
     case 16:
+        sdctl_writel(ldl_be_p(response), SDCARD_REG_ARG);
         sdctl_writel(ldl_be_p(response + 4), SDCARD_REG_ARG2);
         sdctl_writel(ldl_be_p(response + 8), SDCARD_REG_ARG3);
         sdctl_writel(ldl_be_p(response + 12), SDCARD_REG_ARG4);
-        /* fall through */
+        sdctl_writel(SDCARD_CTRL_EN | SDCARD_CTRL_SEND | SDCARD_CTRL_AUTOCRC7 |
+                     SDCARD_CTRL_136BIT |
+                     (cmd << SDCARD_CTRL_CMD_SHIFT), SDCARD_REG_CTRL);
+        break;
     case 4:
         sdctl_writel(ldl_be_p(response), SDCARD_REG_ARG);
         sdctl_writel(SDCARD_CTRL_EN | SDCARD_CTRL_SEND | SDCARD_CTRL_AUTOCRC7 |
