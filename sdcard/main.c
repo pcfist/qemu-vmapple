@@ -26,6 +26,7 @@
 #include "gpio.h"
 #include "fast.h"
 #include "crc16.h"
+#include "proxy.h"
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -233,6 +234,10 @@ int main(int argc, char **argv)
     }
 
     printf("Starting SD Card emulation ...\n");
+
+    if (proxy_init()) {
+        return 1;
+    }
 
     while (1) {
         volatile struct fast_queue_elem *el = fast_next();
