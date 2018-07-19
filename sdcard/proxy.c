@@ -74,6 +74,33 @@ static void sdcard_newcmd(SDRequest *request)
     }
 }
 
+static void sdcard_send_data(void)
+{
+    uint8_t data[4];
+    int data_cnt = 0;
+    uint32_t *sddat = sdcard_map;
+    int len = 0;
+
+    while (sdbus_data_ready(&sdbus)) {
+        data[data_cnt++] = sdbus_read_data(&sdbus);
+        if (data_cnt == 4) {
+            writel(ldl_be_p(data), sddat++);
+            data_cnt = 0;
+            len += 4;
+        }
+
+        /* The biggest sector size we support is 512 bytes */
+        if (len == 512) {
+            break;
+        }
+    }
+
+    /* Send data at addr 0 */
+    sdctl_writel(len << SDCARD_PTR_LEN_SHIFT, SDCARD_REG_PTR);
+    sdctl_writel(SDCARD_DATCTRL_SEND | SDCARD_DATCTRL_AUTOCRC16,
+                 SDCARD_REG_DATCTRL);
+}
+
 static void *sdcard_proxy(void *opaque)
 {
     /* Make sure we're running on the realtime CPU */
@@ -118,6 +145,8 @@ static void *sdcard_proxy(void *opaque)
             printf("Command complete: %08x\n", sts);
             sdctl_writel(SDCARD_STATUS_COMP, SDCARD_REG_STATUS);
         }
+
+        sdcard_send_data();
     }
 
     return NULL;

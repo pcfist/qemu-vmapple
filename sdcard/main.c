@@ -40,7 +40,7 @@
 #define SECTOR_SIZE 512
 
 /* XXX move to blk backend */
-static void *sdcard_map;
+void *sdcard_map;
 
 /* XXX remove */
 static int fd;
