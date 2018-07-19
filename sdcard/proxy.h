@@ -61,7 +61,7 @@ int proxy_init(void);
  *
  */
 
-#define SDCARD_CMD_HOST2CARD		0x80
+#define SDCARD_CMD_HOST2CARD		0x40
 
 #define SDCARD_REG_CTRL			0x00
 #define SDCARD_CTRL_EN			(1 << 0)
