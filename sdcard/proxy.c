@@ -96,9 +96,13 @@ static void sdcard_send_data(void)
     }
 
     /* Send data at addr 0 */
-    sdctl_writel(len << SDCARD_PTR_LEN_SHIFT, SDCARD_REG_PTR);
-    sdctl_writel(SDCARD_DATCTRL_SEND | SDCARD_DATCTRL_AUTOCRC16,
-                 SDCARD_REG_DATCTRL);
+    if (len) {
+        sdctl_writel(len << SDCARD_PTR_LEN_SHIFT, SDCARD_REG_PTR);
+        sdctl_writel(SDCARD_DATCTRL_SEND | SDCARD_DATCTRL_AUTOCRC16,
+                     SDCARD_REG_DATCTRL);
+
+        printf("Sent %d bytes data\n", len);
+    }
 }
 
 static void *sdcard_proxy(void *opaque)
