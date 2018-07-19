@@ -8,9 +8,6 @@
 
 #include <stdint.h>
 
-int uio_init(void);
-void *uio_map(int idx);
-
 #ifdef __arm__
 #define isb()     asm volatile ("isb sy" : : : "memory")
 #define dsb()     asm volatile ("dsb sy" : : : "memory")
@@ -30,3 +27,12 @@ void *uio_map(int idx);
 #define readl(c)        ({ uint32_t __v = __arch_getl(c); __iormb(); __v; })
 #define writel(v,c)     ({ uint32_t __v = v; __iowmb(); __arch_putl(__v,c); __v; })
 
+enum uio_range {
+    UIO_RANGE_BRAM = 0,
+    UIO_RANGE_CTL,
+    UIO_RANGE_GPIO,
+    UIO_RANGE_MAX,
+};
+
+int uio_init(void);
+void *uio_map(enum uio_range idx);

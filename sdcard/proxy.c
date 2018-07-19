@@ -48,7 +48,7 @@ static void *sdcard_proxy(void *opaque)
     /* Make sure we're running on the realtime CPU */
     sdcard_set_affinity();
 
-    sdctl_map = uio_map(1);
+    sdctl_map = uio_map(UIO_RANGE_CTL);
     if (!sdctl_map) {
         printf("ERROR opening SD control register block\n");
         return NULL;

@@ -37,7 +37,7 @@ void gpio_set_kick(int high)
 
 int gpio_init(void)
 {
-    if (!(gpio_map = uio_map(2))) {
+    if (!(gpio_map = uio_map(UIO_RANGE_GPIO))) {
         return 1;
     }
 

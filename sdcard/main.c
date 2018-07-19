@@ -52,8 +52,7 @@ static void benchmark_sdctl(void)
     uint64_t usec_before;
     uint64_t usec_after;
 
-    gpio_set_reset(0);
-    sdctl_map = uio_map(3);
+    sdctl_map = uio_map(UIO_RANGE_CTL);
 
     gettimeofday(&tv_before, NULL);
     for (i = 0; i < 1000000; i++) {
@@ -212,9 +211,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (!(sdcard_map = uio_map(0))) {
+    if (!(sdcard_map = uio_map(UIO_RANGE_BRAM))) {
         return 1;
     }
+
+
+    /* Reset SDcard FPGA device */
+    gpio_set_reset(1);
+    gpio_set_reset(0);
 
     axi_bench();
     benchmark_sdctl();

@@ -57,13 +57,21 @@ static long uio_get_mem_val(int idx, const char *type)
     return val;
 }
 
-void *uio_map(int idx)
+void *uio_map(enum uio_range idx)
 {
     long size = uio_get_mem_val(idx, "size");
     void* map_addr;
 
+    if (idx >= UIO_RANGE_MAX) {
+        return NULL;
+    }
+
     map_addr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, uio_fd,
                     idx * getpagesize());
+
+    if (map_addr == MAP_FAILED) {
+        return NULL;
+    }
 
     return map_addr;
 }
