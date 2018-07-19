@@ -187,9 +187,9 @@ static int sdcard_init(char *filename)
 
     /* Create SD card device */
     sddev = qdev_create(bus, TYPE_SD_CARD);
-    qdev_init_nofail(sddev);
     blk = blk_new_open(filename, NULL, NULL, BDRV_O_RDWR, &error_fatal);
     qdev_prop_set_drive(sddev, "drive", blk, &error_fatal);
+    qdev_init_nofail(sddev);
     object_property_set_bool(OBJECT(sddev), true, "realized", &error_fatal);
 
     return 0;
