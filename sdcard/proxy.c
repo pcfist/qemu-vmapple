@@ -70,7 +70,8 @@ static void sdcard_newcmd(SDRequest *request)
                      (cmd << SDCARD_CTRL_CMD_SHIFT), SDCARD_REG_CTRL);
         break;
     default:
-        printf("CMD%d failed (%d)\n", cmd, rsplen);
+        fast_dbg_int("CMD failed: ", cmd);
+        fast_dbg_int("CMD rsplen: ", rsplen);
         break;
     }
 }
@@ -149,7 +150,7 @@ static void *sdcard_proxy(void *opaque)
         }
 
         if (sts & SDCARD_STATUS_COMP) {
-            printf("Command complete: %08x\n", sts);
+            fast_dbg_int("Command complete: ", sts);
             sdctl_writel(SDCARD_STATUS_COMP, SDCARD_REG_STATUS);
         }
     }

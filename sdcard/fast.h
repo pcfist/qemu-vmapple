@@ -43,6 +43,9 @@ struct fast_queue_elem {
     uint64_t extra;
 };
 
+extern volatile struct fast_queue_elem fast_queue[512];
+extern volatile struct fast_queue_elem *fast_head, *fast_tail;
+
 /********* Consumer API *********/
 /* Peek the next element in the ring */
 volatile struct fast_queue_elem *fast_next(void);
@@ -51,5 +54,29 @@ int fast_done(volatile struct fast_queue_elem *el);
 
 /********* Producer API **********/
 int fast_init(void);
+
+static inline void fast_send(enum sdcard_msg_cmd cmd, const void *ptr,
+                             uint64_t extra)
+{
+    fast_head->cmd = cmd;
+    fast_head->ptr = (void *)ptr;
+    fast_head->extra = extra;
+
+    if (fast_head == &fast_head[ARRAY_SIZE(fast_queue)-1]) {
+        fast_head = fast_queue;
+    } else {
+        fast_head++;
+    }
+}
+
+static inline void fast_dbg(const char *msg)
+{
+    fast_send(SDCARD_MSG_DBG, msg, 0);
+}
+
+static inline void fast_dbg_int(const char *msg, uint64_t num)
+{
+    fast_send(SDCARD_MSG_DBG_INT, msg, num);
+}
 
 #endif
