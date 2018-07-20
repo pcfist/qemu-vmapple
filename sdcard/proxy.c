@@ -129,13 +129,13 @@ static void *sdcard_proxy(void *opaque)
         if (sts & SDCARD_STATUS_NEW) {
             SDRequest req;
 
-//            printf("New Command: %08x\n", sts);
-
             req.cmd = (sts & SDCARD_STATUS_CMD_MASK)
                           >> SDCARD_STATUS_CMD_SHIFT;
             req.arg = sdctl_readl(SDCARD_REG_ARG);
             req.crc = (sts & SDCARD_STATUS_CRC7_MASK
                           >> SDCARD_STATUS_CRC7_SHIFT);
+
+            fast_dbg_int("New Command: ", req.cmd);
 
             sdcard_in_newcmd = true;
             sdcard_newcmd(&req);
@@ -150,7 +150,14 @@ static void *sdcard_proxy(void *opaque)
         }
 
         if (sts & SDCARD_STATUS_COMP) {
+            int delay;
+
             fast_dbg_int("Command complete: ", sts);
+            delay = (sts & SDCARD_STATUS_CMD_DELAY_MASK) >>
+                    SDCARD_STATUS_CMD_DELAY_SHIFT;
+            if (delay > 50) {
+                fast_dbg_int("Too big delay: ", delay);
+            }
             sdctl_writel(SDCARD_STATUS_COMP, SDCARD_REG_STATUS);
         }
     }
