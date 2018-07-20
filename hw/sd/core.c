@@ -89,11 +89,19 @@ void sdbus_set_voltage(SDBus *sdbus, uint16_t millivolts)
 
 int sdbus_do_command(SDBus *sdbus, SDRequest *req, uint8_t *response)
 {
-    SDState *card = get_card(sdbus);
+    static SDState *card;
+
+    if (!card) {
+        card = get_card(sdbus);
+    }
 
     trace_sdbus_command(sdbus_name(sdbus), req->cmd, req->arg);
     if (card) {
-        SDCardClass *sc = SD_CARD_GET_CLASS(card);
+        static SDCardClass *sc;
+
+        if (!sc) {
+            sc = SD_CARD_GET_CLASS(card);
+        }
 
         return sc->do_command(card, req, response);
     }
