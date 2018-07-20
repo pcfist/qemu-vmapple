@@ -22,6 +22,7 @@
 
 static QemuThread thread;
 static void *sdctl_map;
+static bool sdcard_in_newcmd;
 SDBus sdbus;
 
 static int sdcard_set_affinity(void)
@@ -135,7 +136,9 @@ static void *sdcard_proxy(void *opaque)
             req.crc = (sts & SDCARD_STATUS_CRC7_MASK
                           >> SDCARD_STATUS_CRC7_SHIFT);
 
+            sdcard_in_newcmd = true;
             sdcard_newcmd(&req);
+            sdcard_in_newcmd = false;
 
             /* ACK the status register */
             sdctl_writel(SDCARD_STATUS_NEW, SDCARD_REG_STATUS);
@@ -149,8 +152,19 @@ static void *sdcard_proxy(void *opaque)
             printf("Command complete: %08x\n", sts);
             sdctl_writel(SDCARD_STATUS_COMP, SDCARD_REG_STATUS);
         }
+    }
 
-        sdcard_send_data();
+    return NULL;
+}
+
+static void *sdcard_loop_data(void *opaque)
+{
+    while (1) {
+        if (!sdcard_in_newcmd) {
+            sdcard_send_data();
+        }
+
+        usleep(1000);
     }
 
     return NULL;
@@ -158,7 +172,10 @@ static void *sdcard_proxy(void *opaque)
 
 int proxy_init(void)
 {
-    qemu_thread_create(&thread, "sdcard proxy", sdcard_proxy,
+    qemu_thread_create(&thread, "sdcard proxy CMD handler", sdcard_proxy,
+                              NULL, QEMU_THREAD_JOINABLE);
+
+    qemu_thread_create(&thread, "sdcard proxy DAT handler", sdcard_loop_data,
                               NULL, QEMU_THREAD_JOINABLE);
 
     return 0;
