@@ -141,6 +141,8 @@ static void *sdcard_proxy(void *opaque)
             sdcard_newcmd(&req);
             sdcard_in_newcmd = false;
 
+            fast_dbg_int("Command processed: ", req.cmd);
+
             /* ACK the status register */
             sdctl_writel(SDCARD_STATUS_NEW, SDCARD_REG_STATUS);
         }

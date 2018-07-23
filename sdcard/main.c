@@ -198,6 +198,7 @@ static int sdcard_init(char *filename)
 int main(int argc, char **argv)
 {
     Error *err = NULL;
+    uint64_t last_time = 0;
 
     module_call_init(MODULE_INIT_TRACE);
     module_call_init(MODULE_INIT_QOM);
@@ -264,11 +265,14 @@ int main(int argc, char **argv)
 //        printf("New CMD: %02x (%c) len=%d\n", msg->cmd, msg->cmd, r);
         switch (el->cmd) {
         case SDCARD_MSG_DBG: {
-            printf("[dbg %#"PRIx64"] %s", el->time, (char*)el->ptr);
+            printf("[dbg %"PRId64"] %s", el->time - last_time, (char*)el->ptr);
+            last_time = el->time;
             break;
         }
         case SDCARD_MSG_DBG_INT: {
-            printf("[dbg %#"PRIx64"] %s%#"PRIx64"\n", el->time, (char*)el->ptr, el->extra);
+            printf("[dbg %"PRId64"] %s%#"PRIx64"\n", el->time - last_time,
+                   (char*)el->ptr, el->extra);
+            last_time = el->time;
             break;
         }
         case SDCARD_MSG_GET_SIZE:
