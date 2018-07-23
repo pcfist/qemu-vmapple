@@ -299,13 +299,13 @@ int main(int argc, char **argv)
 //        printf("New CMD: %02x (%c) len=%d\n", msg->cmd, msg->cmd, r);
         switch (el->cmd) {
         case SDCARD_MSG_DBG: {
-            printf("[dbg %.04f] %s", (double)((el->time - last_time) * 1000000) / time_per_s,
+            printf("[dbg %8.02f] %s", (double)((el->time - last_time) * 1000000) / time_per_s,
                    (char*)el->ptr);
             last_time = el->time;
             break;
         }
         case SDCARD_MSG_DBG_INT: {
-            printf("[dbg %.04f] %s%#"PRIx64"\n",
+            printf("[dbg %8.02f] %s%#"PRIx64"\n",
                    (double)((el->time - last_time) * 1000000) / time_per_s,
                    (char*)el->ptr, el->extra);
             last_time = el->time;
