@@ -157,7 +157,7 @@ static void *sdcard_proxy(void *opaque)
             fast_dbg_int("Command complete: ", sts);
             delay = (sts & SDCARD_STATUS_CMD_DELAY_MASK) >>
                     SDCARD_STATUS_CMD_DELAY_SHIFT;
-            if (delay > 50) {
+            if (!(sts & SDCARD_STATUS_NEW) && (delay > 50)) {
                 fast_dbg_int("Too big delay: ", delay);
             }
             sdctl_writel(SDCARD_STATUS_COMP, SDCARD_REG_STATUS);
