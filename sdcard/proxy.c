@@ -123,8 +123,22 @@ static void *sdcard_proxy(void *opaque)
 
     while (1) {
         uint32_t sts;
+        uint32_t sts_mask = 0;
 
         sts = sdctl_readl(SDCARD_REG_STATUS);
+
+        if (sts & SDCARD_STATUS_COMP) {
+            int delay;
+
+            fast_dbg_int("Command complete: ", sts);
+            delay = (sts & SDCARD_STATUS_CMD_DELAY_MASK) >>
+                    SDCARD_STATUS_CMD_DELAY_SHIFT;
+            if (!(sts & SDCARD_STATUS_NEW) && (delay > 50)) {
+                fast_dbg_int("Too big delay: ", delay);
+            }
+
+            sts_mask = SDCARD_STATUS_COMP;
+        }
 
         if (sts & SDCARD_STATUS_NEW) {
             SDRequest req;
@@ -144,23 +158,15 @@ static void *sdcard_proxy(void *opaque)
             fast_dbg_int("Command processed: ", req.cmd);
 
             /* ACK the status register */
-            sdctl_writel(SDCARD_STATUS_NEW, SDCARD_REG_STATUS);
+            sts_mask |= SDCARD_STATUS_NEW;
         }
 
         if (sts & SDCARD_STATUS_TRANSIT) {
             //printf("Command in flight: %08x\n", sts);
         }
 
-        if (sts & SDCARD_STATUS_COMP) {
-            int delay;
-
-            fast_dbg_int("Command complete: ", sts);
-            delay = (sts & SDCARD_STATUS_CMD_DELAY_MASK) >>
-                    SDCARD_STATUS_CMD_DELAY_SHIFT;
-            if (!(sts & SDCARD_STATUS_NEW) && (delay > 50)) {
-                fast_dbg_int("Too big delay: ", delay);
-            }
-            sdctl_writel(SDCARD_STATUS_COMP, SDCARD_REG_STATUS);
+        if (sts_mask) {
+            sdctl_writel(sts_mask, SDCARD_REG_STATUS);
         }
     }
 
