@@ -68,7 +68,7 @@ static inline void fast_send(enum sdcard_msg_cmd cmd, const void *ptr,
     el->time = cpu_get_host_ticks();
     asm volatile("" : : : "memory");
 
-    if (el == &fast_head[511]) {
+    if (el == &fast_queue[511]) {
         fast_head = fast_queue;
     } else {
         fast_head = el + 1;
