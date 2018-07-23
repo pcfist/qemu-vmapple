@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 {
     Error *err = NULL;
     uint64_t last_time = 0;
-    double time_per_us = 0;
+    uint32_t time_per_us = 0;
 
     module_call_init(MODULE_INIT_TRACE);
     module_call_init(MODULE_INIT_QOM);
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 
     init_perfcounters(1, 1);
     last_time = cpu_get_host_ticks();
-    usleep(10000);
+    usleep(100000);
     time_per_us = (cpu_get_host_ticks() - last_time);
 
     printf("Starting SD Card emulation ...\n");
@@ -299,14 +299,14 @@ int main(int argc, char **argv)
 //        printf("New CMD: %02x (%c) len=%d\n", msg->cmd, msg->cmd, r);
         switch (el->cmd) {
         case SDCARD_MSG_DBG: {
-            printf("[dbg %.02f] %s", ((double)(el->time - last_time) / time_per_us) / 10000.,
+            printf("[dbg %.02f] %s", ((double)(el->time - last_time) / time_per_us) / 100000.,
                    (char*)el->ptr);
             last_time = el->time;
             break;
         }
         case SDCARD_MSG_DBG_INT: {
             printf("[dbg %.02f] %s%#"PRIx64"\n",
-                   ((double)(el->time - last_time) / time_per_us) / 10000.,
+                   ((double)(el->time - last_time) / time_per_us) / 100000.,
                    (char*)el->ptr, el->extra);
             last_time = el->time;
             break;
