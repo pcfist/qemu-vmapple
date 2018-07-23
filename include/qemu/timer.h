@@ -1036,15 +1036,10 @@ static inline int64_t cpu_get_host_ticks(void)
             asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(pmccntr));
             // The counter is set up to count every 64th cycle
             return (int64_t)(pmccntr);
-        } else {
-            printf("pmcntenset not counting\n");
         }
-    } else {
-        printf("pmuseren not allowed\n");
     }
 
-    printf("Use gettimeofday()\n");
-    return get_clock();
+    return 0;
 }
 #else
 /* The host CPU doesn't have an easily accessible cycle counter.
