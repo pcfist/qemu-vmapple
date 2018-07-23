@@ -492,11 +492,14 @@ static void sd_set_sdstatus(SDState *sd)
 
 static int sd_req_crc_validate(SDRequest *req)
 {
+#if 0
     uint8_t buffer[5];
     buffer[0] = 0x40 | req->cmd;
     stl_be_p(&buffer[1], req->arg);
-    return 0;
     return sd_crc7(buffer, 5) != req->crc;	/* TODO */
+#else
+    return 0;
+#endif
 }
 
 static void sd_response_r1_make(SDState *sd, uint8_t *response)
@@ -1086,17 +1089,17 @@ static sd_rsp_type_t sd_normal_command(SDState *sd, SDRequest req)
         switch (sd->state) {
         case sd_sendingdata_state:
             sd->state = sd_transfer_state;
-            return sd_r1b;
 
         case sd_receivingdata_state:
             sd->state = sd_programming_state;
             /* Bzzzzzzztt .... Operation complete.  */
             sd->state = sd_transfer_state;
-            return sd_r1b;
 
         default:
             break;
         }
+
+        return sd_r1b;
         break;
 
     case 13:	/* CMD13:  SEND_STATUS */
@@ -1693,6 +1696,7 @@ int sd_do_command(SDState *sd, SDRequest *req,
 
 send_response:
     switch (rtype) {
+    case sd_illegal:
     case sd_r1:
     case sd_r1b:
         sd_response_r1_make(sd, response);
@@ -1725,7 +1729,6 @@ send_response:
         break;
 
     case sd_r0:
-    case sd_illegal:
         rsplen = 0;
         break;
     default:
