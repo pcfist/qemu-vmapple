@@ -60,15 +60,17 @@ int fast_init(void);
 static inline void fast_send(enum sdcard_msg_cmd cmd, const void *ptr,
                              uint64_t extra)
 {
-    fast_head->cmd = cmd;
-    fast_head->ptr = (void *)ptr;
-    fast_head->extra = extra;
-    fast_head->time = cpu_get_host_ticks();
+    struct fast_queue_elem *el = fast_head;
 
-    if (fast_head == &fast_head[ARRAY_SIZE(fast_queue)-1]) {
+    el->cmd = cmd;
+    el->ptr = (void *)ptr;
+    el->extra = extra;
+    el->time = cpu_get_host_ticks();
+
+    if (el == &fast_head[511]) {
         fast_head = fast_queue;
     } else {
-        fast_head++;
+        fast_head = el + 1;
     }
 }
 
