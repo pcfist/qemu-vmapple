@@ -30,6 +30,7 @@ static int sdcard_set_affinity(void)
     cpu_set_t cpuset;
     qemu_thread_get_self(&thread);
 
+    CPU_ZERO(&cpuset);
     /* CPU 1 (2nd core) is our destination CPU */
     CPU_SET(1, &cpuset);
 
