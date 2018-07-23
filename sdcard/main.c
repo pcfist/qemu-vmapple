@@ -264,11 +264,11 @@ int main(int argc, char **argv)
 //        printf("New CMD: %02x (%c) len=%d\n", msg->cmd, msg->cmd, r);
         switch (el->cmd) {
         case SDCARD_MSG_DBG: {
-            printf("[dbg] %s", (char*)el->ptr);
+            printf("[dbg %#"PRIx64"] %s", el->time, (char*)el->ptr);
             break;
         }
         case SDCARD_MSG_DBG_INT: {
-            printf("[dbg] %s%#"PRIx64"\n", (char*)el->ptr, el->extra);
+            printf("[dbg %#"PRIx64"] %s%#"PRIx64"\n", el->time, (char*)el->ptr, el->extra);
             break;
         }
         case SDCARD_MSG_GET_SIZE:

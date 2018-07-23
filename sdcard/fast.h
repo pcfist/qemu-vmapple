@@ -11,6 +11,7 @@
 
 #include "qemu/osdep.h"
 #include "qemu-common.h"
+#include "qemu/timer.h"
 
 enum sdcard_msg_cmd {
     /* FAST commands */
@@ -41,6 +42,7 @@ struct fast_queue_elem {
     uint8_t __pad[3];
     void *ptr;
     uint64_t extra;
+    uint64_t time;
 };
 
 extern volatile struct fast_queue_elem fast_queue[512];
@@ -61,6 +63,7 @@ static inline void fast_send(enum sdcard_msg_cmd cmd, const void *ptr,
     fast_head->cmd = cmd;
     fast_head->ptr = (void *)ptr;
     fast_head->extra = extra;
+    fast_head->time = cpu_get_host_ticks();
 
     if (fast_head == &fast_head[ARRAY_SIZE(fast_queue)-1]) {
         fast_head = fast_queue;
