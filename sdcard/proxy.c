@@ -110,7 +110,10 @@ static void sdcard_send_data(void)
 static void *sdcard_proxy(void *opaque)
 {
     /* Make sure we're running on the realtime CPU */
-    sdcard_set_affinity();
+    if (sdcard_set_affinity()) {
+        printf("ERROR setting affinity\n");
+        return NULL;
+    }
 
     sdctl_map = uio_map(UIO_RANGE_CTL);
     if (!sdctl_map) {
