@@ -199,6 +199,7 @@ int main(int argc, char **argv)
 {
     Error *err = NULL;
     uint64_t last_time = 0;
+    uint32_t time_per_us = 0;
 
     module_call_init(MODULE_INIT_TRACE);
     module_call_init(MODULE_INIT_QOM);
@@ -210,7 +211,6 @@ int main(int argc, char **argv)
         return 1;
     }
     bdrv_init();
-
 
     if (sdcard_init(argv[1])) {
         printf("Failed to initialize SD emulation\n");
@@ -248,6 +248,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    last_time = cpu_get_host_ticks();
+    usleep(10000);
+    time_per_us = (cpu_get_host_ticks() - last_time) / 10000;
+
     printf("Starting SD Card emulation ...\n");
 
     if (proxy_init()) {
@@ -265,12 +269,14 @@ int main(int argc, char **argv)
 //        printf("New CMD: %02x (%c) len=%d\n", msg->cmd, msg->cmd, r);
         switch (el->cmd) {
         case SDCARD_MSG_DBG: {
-            printf("[dbg %"PRId64"] %s", el->time - last_time, (char*)el->ptr);
+            printf("[dbg %"PRId64"] %s", (el->time - last_time) / time_per_us,
+                   (char*)el->ptr);
             last_time = el->time;
             break;
         }
         case SDCARD_MSG_DBG_INT: {
-            printf("[dbg %"PRId64"] %s%#"PRIx64"\n", el->time - last_time,
+            printf("[dbg %"PRId64"] %s%#"PRIx64"\n",
+                   (el->time - last_time) / time_per_us,
                    (char*)el->ptr, el->extra);
             last_time = el->time;
             break;
