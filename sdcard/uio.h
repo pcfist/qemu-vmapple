@@ -9,18 +9,17 @@
 #include <stdint.h>
 
 #ifdef __arm__
-#define isb()     asm volatile ("isb sy" : : : "memory")
-#define dsb()     asm volatile ("dsb sy" : : : "memory")
-#define dmb()     asm volatile ("dmb sy" : : : "memory")
+#define dmb_ishst()   asm volatile ("dmb ishst" : : : "memory")
+#define dmb_ish()     asm volatile ("dmb ish" : : : "memory")
 #else
-#define isb()     asm volatile ("" : : : "memory")
-#define dsb()     asm volatile ("" : : : "memory")
-#define dmb()     asm volatile ("" : : : "memory")
+#define dmb_ishst()   asm volatile ("" : : : "memory")
+#define dmb_ish()     asm volatile ("" : : : "memory")
 #endif
 
-#define mb()            dsb()
-#define __iormb()       dmb()
-#define __iowmb()       dmb()
+#define mb()     asm volatile ("" : : : "memory")
+
+#define __iormb()       mb();
+#define __iowmb()       mb();
 
 #define __arch_getl(a)                  (*(volatile unsigned int *)(a))
 #define __arch_putl(v,a)                (*(volatile unsigned int *)(a) = (v))

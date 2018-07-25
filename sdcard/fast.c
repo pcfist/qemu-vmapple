@@ -18,13 +18,11 @@ volatile struct fast_queue_elem *fast_tail = fast_queue;
 int fast_done(volatile struct fast_queue_elem *el)
 {
     assert(fast_tail == el);
-    dmb();
     if (el == &fast_queue[511]) {
         fast_tail = fast_head;
     } else {
         fast_tail = el + 1;
     }
-    dmb();
 
     return 0;
 }
