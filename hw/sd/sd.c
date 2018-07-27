@@ -45,6 +45,7 @@
 #include "qemu/log.h"
 #include "sdmmc-internal.h"
 #include "trace.h"
+#include "sdcard/fast.h"
 
 //#define DEBUG_SD 1
 
@@ -1647,6 +1648,7 @@ int sd_do_command(SDState *sd, SDRequest *req,
     sd_rsp_type_t rtype;
     int rsplen;
 
+fast_dbg_int("In function " "sd_command: ", __LINE__);
     if (!sd->blk || !blk_is_inserted(sd->blk) || !sd->enable) {
         return 0;
     }
@@ -1676,12 +1678,14 @@ int sd_do_command(SDState *sd, SDRequest *req,
     last_state = sd->state;
     sd_set_mode(sd);
 
+fast_dbg_int("In function " "sd_command: ", __LINE__);
     if (sd->expecting_acmd) {
         sd->expecting_acmd = false;
         rtype = sd_app_command(sd, *req);
     } else {
         rtype = sd_normal_command(sd, *req);
     }
+fast_dbg_int("In function " "sd_command: ", __LINE__);
 
     if (rtype == sd_illegal) {
         sd->card_status |= ILLEGAL_COMMAND;
@@ -1695,6 +1699,7 @@ int sd_do_command(SDState *sd, SDRequest *req,
     }
 
 send_response:
+fast_dbg_int("In function " "sd_command: ", __LINE__);
     switch (rtype) {
     case sd_illegal:
     case sd_r1:
@@ -1746,6 +1751,7 @@ send_response:
 #ifdef DEBUG_SD
     qemu_hexdump((const char *)response, stderr, "Response", rsplen);
 #endif
+fast_dbg_int("In function " "sd_command: ", __LINE__);
 
     return rsplen;
 }
