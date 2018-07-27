@@ -232,6 +232,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    if (mlockall(MCL_FUTURE)) {
+        printf("Failed to lock memory\n");
+        return 1;
+    }
 
     /* Reset SDcard FPGA device */
     gpio_set_reset(1);
