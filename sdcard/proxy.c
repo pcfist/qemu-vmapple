@@ -150,8 +150,13 @@ static void init_perfcounters (int32_t do_reset, int32_t enable_divider)
     last_time = cpu_get_host_ticks();
     usec_before = tv_before.tv_sec * 1000000ULL + tv_before.tv_usec;
     usec_after = usec_before + 100000;
-    while (!gettimeofday(&tv_after, NULL) &&
-           usec_after <= (tv_after.tv_sec * 1000000ULL + tv_after.tv_usec)) ;
+    while (1) {
+        gettimeofday(&tv_after, NULL);
+        usec_after = tv_after.tv_sec * 1000000ULL + tv_after.tv_usec;
+        if (usec_after >= (usec_before + 100000)) {
+            break;
+        }
+    }
     time_per_s = (cpu_get_host_ticks() - last_time) * 10;
 }
 
