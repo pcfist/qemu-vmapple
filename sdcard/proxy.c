@@ -112,31 +112,47 @@ static void sdcard_send_data(void)
 }
 
 /* XXX remove */
-static void init_perfcounters (int32_t do_reset, int32_t enable_divider) {
-#ifdef __arm__
-  // in general enable all counters (including cycle counter)
-  int32_t value = 1;
+static void init_perfcounters (int32_t do_reset, int32_t enable_divider)
+{
+    struct timeval tv_before;
+    struct timeval tv_after;
+    uint64_t usec_before;
+    uint64_t usec_after;
 
-  // peform reset:
-  if (do_reset) {
-      value |= 2;     // reset all counters to zero.
-      value |= 4;     // reset cycle counter to zero.
+#ifdef __arm__
+    // in general enable all counters (including cycle counter)
+    int32_t value = 1;
+
+    // peform reset:
+    if (do_reset) {
+            value |= 2;         // reset all counters to zero.
+            value |= 4;         // reset cycle counter to zero.
     }
 
-  if (enable_divider)
-    value |= 8;     // enable "by 64" divider for CCNT.
+    if (enable_divider) {
+        value |= 8;         // enable "by 64" divider for CCNT.
+    }
 
-  value |= 16;
+    value |= 16;
 
-  // program the performance-counter control-register:
-  asm volatile ("MCR p15, 0, %0, c9, c12, 0\t\n" :: "r"(value));
+    // program the performance-counter control-register:
+    asm volatile ("MCR p15, 0, %0, c9, c12, 0\t\n" :: "r"(value));
 
-  // enable all counters:
-  asm volatile ("MCR p15, 0, %0, c9, c12, 1\t\n" :: "r"(0x8000000f));
+    // enable all counters:
+    asm volatile ("MCR p15, 0, %0, c9, c12, 1\t\n" :: "r"(0x8000000f));
 
-  // clear overflows:
-  asm volatile ("MCR p15, 0, %0, c9, c12, 3\t\n" :: "r"(0x8000000f));
+    // clear overflows:
+    asm volatile ("MCR p15, 0, %0, c9, c12, 3\t\n" :: "r"(0x8000000f));
+
 #endif
+
+    gettimeofday(&tv_before, NULL);
+    last_time = cpu_get_host_ticks();
+    usec_before = tv_before.tv_sec * 1000000ULL + tv_before.tv_usec;
+    usec_after = usec_before + 100000;
+    while (!gettimeofday(&tv_after, NULL) &&
+           usec_after <= (tv_after.tv_sec * 1000000ULL + tv_after.tv_usec)) ;
+    time_per_s = (cpu_get_host_ticks() - last_time) * 10;
 }
 
 
@@ -155,10 +171,7 @@ static void *sdcard_proxy(void *opaque)
     }
 
     /* Initialize PMC */
-    init_perfcounters(1, 1);
-    last_time = cpu_get_host_ticks();
-    usleep(10000);
-    time_per_s = (cpu_get_host_ticks() - last_time);
+    init_perfcounters(1, 0);
 
 
     /* Enable command reads */
