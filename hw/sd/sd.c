@@ -1773,7 +1773,7 @@ static void sd_blk_write(SDState *sd, uint64_t addr, uint32_t len)
 }
 
 #define BLK_READ_BLOCK(a, len)	if (0) sd_blk_read(sd, a, len)
-#define BLK_WRITE_BLOCK(a, len)	sd_blk_write(sd, a, len)
+#define BLK_WRITE_BLOCK(a, len)	if (0) sd_blk_write(sd, a, len)
 #define APP_READ_BLOCK(a, len)	memset(sd->data, 0xec, len)
 #define APP_WRITE_BLOCK(a, len)
 
