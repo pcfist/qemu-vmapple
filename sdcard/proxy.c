@@ -30,6 +30,28 @@ __sram_data static char proxy_stack[10240];
 __sram_data uint64_t last_time = 0;
 __sram_data double time_per_s = 0;
 
+static void sdcard_map_sram(void)
+{
+    int fd = open ("/sys/devices/soc0/amba/fffc0000.ocm/fffc0000.sram", O_RDONLY);
+    int max_size = 0x40000 - 0x1000;
+    void *sram;
+    uintptr_t sram_size = (uintptr_t)__sram_stop - (uintptr_t)__sram_start;
+
+    g_assert(sram_size <= max_size);
+
+    /* Map real SRAM */
+    sram = mmap(NULL, sram_size, PROT_READ | PROT_READ | PROT_EXEC,
+                MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE, fd, 0);
+
+    /* Copy SRAM section into SRAM */
+    memcpy(sram, __sram_start, sram_size);
+
+    /* Overlay old SRAM section with SRAM backed memory */
+    g_assert(munmap(__sram_start, sram_size));
+    g_assert(mremap(sram, sram_size, sram_size, MREMAP_FIXED,
+                    __sram_start) == __sram_start);
+}
+
 static int sdcard_set_affinity(void)
 {
     cpu_set_t cpuset;
@@ -253,6 +275,8 @@ int proxy_init(void)
 {
     pthread_attr_t tattr;
     pthread_t tid;
+
+    sdcard_map_sram();
 
 #if 1
     pthread_attr_init(&tattr);
