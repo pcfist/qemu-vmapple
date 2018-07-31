@@ -40,8 +40,8 @@ static void sdcard_map_sram(void)
     g_assert(sram_size <= max_size);
 
     /* Map real SRAM */
-    sram = mmap(NULL, sram_size, PROT_READ | PROT_READ | PROT_EXEC,
-                MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE, fd, 0);
+    sram = mmap(NULL, sram_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+                MAP_SHARED | MAP_LOCKED | MAP_POPULATE, fd, 0);
     g_assert(sram != MAP_FAILED);
 
     /* Copy SRAM section into SRAM */
