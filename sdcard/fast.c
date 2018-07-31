@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include "uio.h"
 
-volatile struct fast_queue_elem fast_queue[512];
-volatile struct fast_queue_elem *fast_head = fast_queue;
+__sram_data volatile struct fast_queue_elem fast_queue[512];
+__sram_data volatile struct fast_queue_elem *fast_head = fast_queue;
 volatile struct fast_queue_elem *fast_tail = fast_queue;
 
 int fast_done(volatile struct fast_queue_elem *el)

@@ -12,6 +12,7 @@
 #include "qemu/osdep.h"
 #include "qemu-common.h"
 #include "qemu/timer.h"
+#include "sram.h"
 
 enum sdcard_msg_cmd {
     /* FAST commands */

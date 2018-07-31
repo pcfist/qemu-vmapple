@@ -21,12 +21,14 @@
 #include <pthread.h>
 
 static QemuThread thread;
-static void *sdctl_map;
-static bool sdcard_in_newcmd;
-SDBus sdbus;
+__sram_data static void *sdctl_map;
+__sram_data static bool sdcard_in_newcmd;
+__sram_data SDBus sdbus;
+__sram_data SDState sddev;
+__sram_data static char proxy_stack[10240];
 
-uint64_t last_time = 0;
-double time_per_s = 0;
+__sram_data uint64_t last_time = 0;
+__sram_data double time_per_s = 0;
 
 static int sdcard_set_affinity(void)
 {
@@ -40,7 +42,7 @@ static int sdcard_set_affinity(void)
     return pthread_setaffinity_np(thread.thread, sizeof(cpu_set_t), &cpuset);
 }
 
-static uint32_t sdctl_readl(int reg)
+__sram static uint32_t sdctl_readl(int reg)
 {
     return readl((uint32_t*)(sdctl_map + reg));
 }
@@ -51,7 +53,7 @@ static uint32_t sdctl_writel(uint32_t val, int reg)
     return writel(val, (uint32_t*)(sdctl_map + reg));
 }
 
-static void sdcard_newcmd(SDRequest *request)
+__sram static void sdcard_newcmd(SDRequest *request)
 {
     int rsplen;
     uint8_t response[16];
@@ -161,7 +163,7 @@ static void init_perfcounters (int32_t do_reset, int32_t enable_divider)
 }
 
 
-static void *sdcard_proxy(void *opaque)
+__sram static void *sdcard_proxy(void *opaque)
 {
     /* Make sure we're running on the realtime CPU */
     if (sdcard_set_affinity()) {
@@ -249,8 +251,17 @@ static void *sdcard_loop_data(void *opaque)
 
 int proxy_init(void)
 {
+    pthread_attr_t tattr;
+    pthread_t tid;
+
+#if 1
+    pthread_attr_init(&tattr);
+    pthread_attr_setstack(&tattr, proxy_stack, sizeof(proxy_stack));
+    pthread_create(&tid, &tattr, sdcard_proxy, NULL);
+#else
     qemu_thread_create(&thread, "sdcard proxy CMD handler", sdcard_proxy,
                               NULL, QEMU_THREAD_JOINABLE);
+#endif
 
     qemu_thread_create(&thread, "sdcard proxy DAT handler", sdcard_loop_data,
                               NULL, QEMU_THREAD_JOINABLE);

@@ -179,21 +179,20 @@ static void axi_bench(void)
 
 static int sdcard_init(char *filename)
 {
-    BusState *bus;
-    DeviceState *sddev;
     BlockBackend *blk;
+    DeviceState *sddevstate = &sddev.parent_obj;
 
     /* Create SD bus */
     qbus_create_inplace(&sdbus, sizeof(sdbus),
                         TYPE_SD_BUS, NULL, "sd-bus");
-    bus = &sdbus.qbus;
 
     /* Create SD card device */
-    sddev = qdev_create(bus, TYPE_SD_CARD);
+    object_initialize(&sddev, sizeof(sddev), TYPE_SD_CARD);
+    qdev_set_parent_bus(sddevstate, &sdbus.qbus);
     blk = blk_new_open(filename, NULL, NULL, BDRV_O_RDWR, &error_fatal);
-    qdev_prop_set_drive(sddev, "drive", blk, &error_fatal);
-    qdev_init_nofail(sddev);
-    object_property_set_bool(OBJECT(sddev), true, "realized", &error_fatal);
+    qdev_prop_set_drive(sddevstate, "drive", blk, &error_fatal);
+    qdev_init_nofail(sddevstate);
+    object_property_set_bool(OBJECT(sddevstate), true, "realized", &error_fatal);
 
     return 0;
 }

@@ -80,55 +80,6 @@ enum SDCardStates {
     sd_disconnect_state,
 };
 
-struct SDState {
-    DeviceState parent_obj;
-
-    /* SD Memory Card Registers */
-    uint32_t ocr;
-    uint8_t scr[8];
-    uint8_t cid[16];
-    uint8_t csd[16];
-    uint16_t rca;
-    uint32_t card_status;
-    uint8_t sd_status[64];
-
-    /* Configurable properties */
-    uint8_t spec_version;
-    BlockBackend *blk;
-    bool spi;
-
-    uint32_t mode;    /* current card mode, one of SDCardModes */
-    int32_t state;    /* current card state, one of SDCardStates */
-    uint32_t vhs;
-    bool wp_switch;
-    unsigned long *wp_groups;
-    int32_t wpgrps_size;
-    uint64_t size;
-    uint32_t blk_len;
-    uint32_t multi_blk_cnt;
-    uint32_t erase_start;
-    uint32_t erase_end;
-    uint8_t pwd[16];
-    uint32_t pwd_len;
-    uint8_t function_group[6];
-    uint8_t current_cmd;
-    /* True if we will handle the next command as an ACMD. Note that this does
-     * *not* track the APP_CMD status bit!
-     */
-    bool expecting_acmd;
-    uint32_t blk_written;
-    uint64_t data_start;
-    uint32_t data_offset;
-    uint8_t data[512];
-    qemu_irq readonly_cb;
-    qemu_irq inserted_cb;
-    QEMUTimer *ocr_power_timer;
-    const char *proto_name;
-    bool enable;
-    uint8_t dat_lines;
-    bool cmd_line;
-};
-
 static const char *sd_state_name(enum SDCardStates state)
 {
     static const char *state_name[] = {
@@ -880,7 +831,7 @@ static void sd_lock_command(SDState *sd)
         sd->card_status &= ~CARD_IS_LOCKED;
 }
 
-static sd_rsp_type_t sd_normal_command(SDState *sd, SDRequest req)
+__sram static sd_rsp_type_t sd_normal_command(SDState *sd, SDRequest req)
 {
     uint32_t rca = 0x0000;
     uint64_t addr = (sd->ocr & (1 << 30)) ? (uint64_t) req.arg << 9 : req.arg;
@@ -1469,8 +1420,7 @@ static sd_rsp_type_t sd_normal_command(SDState *sd, SDRequest req)
     return sd_illegal;
 }
 
-static sd_rsp_type_t sd_app_command(SDState *sd,
-                                    SDRequest req)
+__sram static sd_rsp_type_t sd_app_command(SDState *sd, SDRequest req)
 {
     trace_sdcard_app_command(sd->proto_name, sd_acmd_name(req.cmd),
                              req.cmd, req.arg, sd_state_name(sd->state));
@@ -1642,8 +1592,7 @@ static int cmd_valid_while_locked(SDState *sd, SDRequest *req)
             || sd_cmd_class[req->cmd] == 7;
 }
 
-int sd_do_command(SDState *sd, SDRequest *req,
-                  uint8_t *response) {
+__sram int sd_do_command(SDState *sd, SDRequest *req, uint8_t *response) {
     int last_state;
     sd_rsp_type_t rtype;
     int rsplen;

@@ -112,6 +112,14 @@ obj-$(call notempty,$(TARGET_XML_FILES)) += gdbstub-xml.o
 endif #CONFIG_HWEMU
 
 #########################################################
+# SDcard emulation
+
+ifdef CONFIG_SDCARD
+QEMU_CFLAGS += -ffunction-sections -fdata-sections
+QEMU_LDFLAGS += -Wl,-gc-sections -Wl,-T $(SRC_PATH)/sdcard/sdcard.lds
+endif #CONFIG_SDCARD
+
+#########################################################
 # Linux user emulator target
 
 ifdef CONFIG_LINUX_USER

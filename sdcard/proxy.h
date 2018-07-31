@@ -120,6 +120,7 @@ int proxy_init(void);
 #define CRC_STATUS_WRITEERROR	(0xd << SDCARD_DATCTRL_STATUS_SHIFT)
 
 extern SDBus sdbus;
+extern SDState sddev;
 extern void *sdcard_map;
 
 #endif

@@ -88,6 +88,55 @@ typedef struct {
     uint8_t crc;
 } SDRequest;
 
+struct SDState {
+    DeviceState parent_obj;
+
+    /* SD Memory Card Registers */
+    uint32_t ocr;
+    uint8_t scr[8];
+    uint8_t cid[16];
+    uint8_t csd[16];
+    uint16_t rca;
+    uint32_t card_status;
+    uint8_t sd_status[64];
+
+    /* Configurable properties */
+    uint8_t spec_version;
+    BlockBackend *blk;
+    bool spi;
+
+    uint32_t mode;    /* current card mode, one of SDCardModes */
+    int32_t state;    /* current card state, one of SDCardStates */
+    uint32_t vhs;
+    bool wp_switch;
+    unsigned long *wp_groups;
+    int32_t wpgrps_size;
+    uint64_t size;
+    uint32_t blk_len;
+    uint32_t multi_blk_cnt;
+    uint32_t erase_start;
+    uint32_t erase_end;
+    uint8_t pwd[16];
+    uint32_t pwd_len;
+    uint8_t function_group[6];
+    uint8_t current_cmd;
+    /* True if we will handle the next command as an ACMD. Note that this does
+     * *not* track the APP_CMD status bit!
+     */
+    bool expecting_acmd;
+    uint32_t blk_written;
+    uint64_t data_start;
+    uint32_t data_offset;
+    uint8_t data[512];
+    qemu_irq readonly_cb;
+    qemu_irq inserted_cb;
+    QEMUTimer *ocr_power_timer;
+    const char *proto_name;
+    bool enable;
+    uint8_t dat_lines;
+    bool cmd_line;
+};
+
 typedef struct SDState SDState;
 typedef struct SDBus SDBus;
 
