@@ -49,8 +49,10 @@ static void sdcard_map_sram(void)
 
     /* Overlay old SRAM section with SRAM backed memory */
     g_assert(!munmap(__sram_start, sram_size));
-    g_assert(mremap(sram, sram_size, sram_size, MREMAP_FIXED,
-                    __sram_start) == __sram_start);
+    g_assert(!munmap(sram, sram_size));
+    sram = mmap(__sram_start, sram_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+                MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE | MAP_FIXED, fd, 0);
+    g_assert(sram == __sram_start);
 }
 
 static int sdcard_set_affinity(void)
