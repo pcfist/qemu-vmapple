@@ -48,7 +48,7 @@ static void sdcard_map_sram(void)
     memcpy(sram, __sram_start, sram_size);
 
     /* Overlay old SRAM section with SRAM backed memory */
-    g_assert(munmap(__sram_start, sram_size));
+    g_assert(!munmap(__sram_start, sram_size));
     g_assert(mremap(sram, sram_size, sram_size, MREMAP_FIXED,
                     __sram_start) == __sram_start);
 }
