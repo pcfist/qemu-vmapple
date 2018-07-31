@@ -42,6 +42,7 @@ static void sdcard_map_sram(void)
     /* Map real SRAM */
     sram = mmap(NULL, sram_size, PROT_READ | PROT_READ | PROT_EXEC,
                 MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE, fd, 0);
+    g_assert(sram != MAP_FAILED);
 
     /* Copy SRAM section into SRAM */
     memcpy(sram, __sram_start, sram_size);
