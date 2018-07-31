@@ -32,7 +32,7 @@ __sram_data double time_per_s = 0;
 
 static void sdcard_map_sram(void)
 {
-    int fd = open ("/sys/devices/soc0/amba/fffc0000.ocm/fffc0000.sram", O_RDONLY);
+    int fd = open ("/sys/devices/soc0/amba/fffc0000.ocm/fffc0000.sram", O_RDWR);
     int max_size = 0x40000 - 0x1000;
     void *sram;
     uintptr_t sram_size = (uintptr_t)__sram_stop - (uintptr_t)__sram_start;
@@ -41,7 +41,7 @@ static void sdcard_map_sram(void)
 
     /* Map real SRAM */
     sram = mmap(NULL, sram_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                MAP_SHARED | MAP_LOCKED | MAP_POPULATE, fd, 0);
+                MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE, fd, 0);
     g_assert(sram != MAP_FAILED);
 
     /* Copy SRAM section into SRAM */
