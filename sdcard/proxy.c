@@ -25,7 +25,8 @@ __sram_data static void *sdctl_map;
 __sram_data static bool sdcard_in_newcmd;
 __sram_data SDBus sdbus;
 __sram_data SDState sddev;
-__sram_data static char proxy_stack[10240];
+__sram_data static char proxy_stack[PTHREAD_STACK_MIN]
+            __attribute__((__aligned__(4096)));
 
 __sram_data uint64_t last_time = 0;
 __sram_data double time_per_s = 0;
@@ -283,7 +284,7 @@ int proxy_init(void)
 
 #if 1
     pthread_attr_init(&tattr);
-    pthread_attr_setstack(&tattr, proxy_stack, sizeof(proxy_stack));
+    g_assert(!pthread_attr_setstack(&tattr, proxy_stack, sizeof(proxy_stack)));
     pthread_create(&tid, &tattr, sdcard_proxy, NULL);
 #else
     qemu_thread_create(&thread, "sdcard proxy CMD handler", sdcard_proxy,
