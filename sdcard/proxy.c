@@ -280,19 +280,29 @@ int proxy_init(void)
     pthread_attr_t tattr;
     pthread_t tid;
 
+    if (fork()) {
+        qemu_thread_create(&thread, "sdcard proxy DAT handler",
+                           sdcard_loop_data, NULL, QEMU_THREAD_JOINABLE);
+
+        return 0;
+    }
+
+    /* Own process for command processing */
+
     sdcard_map_sram();
 
 #if 1
+    if (1) {
+    sdcard_proxy(NULL);
+    } else {
     pthread_attr_init(&tattr);
     g_assert(!pthread_attr_setstack(&tattr, proxy_stack, sizeof(proxy_stack)));
     pthread_create(&tid, &tattr, sdcard_proxy, NULL);
+    }
 #else
     qemu_thread_create(&thread, "sdcard proxy CMD handler", sdcard_proxy,
                               NULL, QEMU_THREAD_JOINABLE);
 #endif
-
-    qemu_thread_create(&thread, "sdcard proxy DAT handler", sdcard_loop_data,
-                              NULL, QEMU_THREAD_JOINABLE);
 
     return 0;
 }
