@@ -281,6 +281,7 @@ int proxy_init(void)
     pthread_t tid;
 
     if (fork()) {
+        sdcard_map_sram();
         qemu_thread_create(&thread, "sdcard proxy DAT handler",
                            sdcard_loop_data, NULL, QEMU_THREAD_JOINABLE);
 
