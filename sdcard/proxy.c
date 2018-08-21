@@ -52,7 +52,7 @@ static void sdcard_map_sram(void)
     g_assert(!munmap(__sram_start, sram_size));
     g_assert(!munmap(sram, sram_size));
     sram = mmap(__sram_start, sram_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE | MAP_FIXED, fd, 0);
+                MAP_SHARED | MAP_LOCKED | MAP_POPULATE | MAP_FIXED, fd, 0);
     g_assert(sram == __sram_start);
 }
 
@@ -189,23 +189,24 @@ static void init_perfcounters (int32_t do_reset, int32_t enable_divider)
 }
 
 
-__sram static void *sdcard_proxy(void *opaque)
+__sram static int sdcard_proxy(void *opaque)
 {
+    mlockall(MCL_FUTURE);
+
     /* Make sure we're running on the realtime CPU */
     if (sdcard_set_affinity()) {
         printf("ERROR setting affinity\n");
-        return NULL;
+        return 0;
     }
 
     sdctl_map = uio_map(UIO_RANGE_CTL);
     if (!sdctl_map) {
         printf("ERROR opening SD control register block\n");
-        return NULL;
+        return 0;
     }
 
     /* Initialize PMC */
     init_perfcounters(1, 0);
-
 
     /* Enable command reads */
     sdctl_writel(SDCARD_CTRL_EN, SDCARD_REG_CTRL);
@@ -259,7 +260,7 @@ __sram static void *sdcard_proxy(void *opaque)
         }
     }
 
-    return NULL;
+    return 0;
 }
 
 static void *sdcard_loop_data(void *opaque)
@@ -277,33 +278,16 @@ static void *sdcard_loop_data(void *opaque)
 
 int proxy_init(void)
 {
-    pthread_attr_t tattr;
-    pthread_t tid;
-
-    if (fork()) {
-        sdcard_map_sram();
-        qemu_thread_create(&thread, "sdcard proxy DAT handler",
-                           sdcard_loop_data, NULL, QEMU_THREAD_JOINABLE);
-
-        return 0;
-    }
-
-    /* Own process for command processing */
+    int pid;
 
     sdcard_map_sram();
-
-#if 1
-    if (1) {
-    sdcard_proxy(NULL);
-    } else {
-    pthread_attr_init(&tattr);
-    g_assert(!pthread_attr_setstack(&tattr, proxy_stack, sizeof(proxy_stack)));
-    pthread_create(&tid, &tattr, sdcard_proxy, NULL);
+    pid = clone(sdcard_proxy, proxy_stack, CLONE_FILES|CLONE_FS|CLONE_IO, NULL);
+    if (pid == -1) {
+        printf("ERROR creating real time thread: %s\n", strerror(errno));
+        return 1;
     }
-#else
-    qemu_thread_create(&thread, "sdcard proxy CMD handler", sdcard_proxy,
-                              NULL, QEMU_THREAD_JOINABLE);
-#endif
+    qemu_thread_create(&thread, "sdcard proxy DAT handler",
+                       sdcard_loop_data, NULL, QEMU_THREAD_JOINABLE);
 
     return 0;
 }
