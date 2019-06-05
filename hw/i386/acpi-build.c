@@ -110,6 +110,7 @@ typedef struct AcpiMiscInfo {
     unsigned dsdt_size;
     uint16_t pvpanic_port;
     uint16_t applesmc_io_base;
+    uint16_t applesmc_irq;
 } AcpiMiscInfo;
 
 typedef struct AcpiBuildPciBusHotplugState {
@@ -237,6 +238,7 @@ static void acpi_get_misc_info(AcpiMiscInfo *info)
     info->tpm_version = tpm_get_version(tpm_find());
     info->pvpanic_port = pvpanic_port();
     info->applesmc_io_base = applesmc_port();
+    info->applesmc_irq = applesmc_irq();
 }
 
 /*
@@ -2077,7 +2079,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
             aml_io(AML_DECODE16, misc->applesmc_io_base, misc->applesmc_io_base,
                    0x01, APPLESMC_MAX_DATA_LENGTH)
         );
-        aml_append(crs, aml_irq_no_flags(6));
+        aml_append(crs, aml_irq_no_flags(misc->applesmc_irq));
         aml_append(dev, aml_name_decl("_CRS", crs));
 
         aml_append(scope, dev);

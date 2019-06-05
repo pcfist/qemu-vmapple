@@ -23,6 +23,7 @@
 #define TYPE_APPLE_SMC "isa-applesmc"
 #define APPLESMC_MAX_DATA_LENGTH       32
 #define APPLESMC_PROP_IO_BASE "iobase"
+#define APPLESMC_PROP_IRQ "irq"
 
 static inline uint16_t applesmc_port(void)
 {
@@ -30,6 +31,16 @@ static inline uint16_t applesmc_port(void)
 
     if (obj) {
         return object_property_get_uint(obj, APPLESMC_PROP_IO_BASE, NULL);
+    }
+    return 0;
+}
+
+static inline uint8_t applesmc_irq(void)
+{
+    Object *obj = object_resolve_path_type("", TYPE_APPLE_SMC, NULL);
+
+    if (obj) {
+        return object_property_get_uint(obj, APPLESMC_PROP_IRQ, NULL);
     }
     return 0;
 }

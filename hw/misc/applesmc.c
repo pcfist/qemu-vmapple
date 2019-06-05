@@ -104,7 +104,9 @@ struct AppleSMCState {
     MemoryRegion io_data;
     MemoryRegion io_cmd;
     MemoryRegion io_err;
+    qemu_irq irq;
     uint32_t iobase;
+    uint8_t isairq;
     uint8_t cmd;
     uint8_t status;
     uint8_t status_1e;
@@ -385,6 +387,8 @@ static void applesmc_isa_realize(DeviceState *dev, Error **errp)
         s->osk = default_osk;
     }
 
+    isa_init_irq(&s->parent_obj, &s->irq, s->isairq);
+
     QLIST_INIT(&s->data_def);
     qdev_applesmc_isa_reset(dev);
 }
@@ -393,6 +397,7 @@ static Property applesmc_isa_properties[] = {
     DEFINE_PROP_UINT32(APPLESMC_PROP_IO_BASE, AppleSMCState, iobase,
                        APPLESMC_DEFAULT_IOBASE),
     DEFINE_PROP_STRING("osk", AppleSMCState, osk),
+    DEFINE_PROP_UINT8("irq", AppleSMCState, isairq, 6),
     DEFINE_PROP_END_OF_LIST(),
 };
 
