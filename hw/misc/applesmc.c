@@ -73,10 +73,12 @@ enum {
 };
 
 #ifdef DEBUG_SMC
-#define smc_debug(...) fprintf(stderr, "AppleSMC: " __VA_ARGS__)
+#define smc_debug_enabled 1
 #else
-#define smc_debug(...) do { } while (0)
+#define smc_debug_enabled 0
 #endif
+
+#define smc_debug(...) if (smc_debug_enabled) fprintf(stderr, "AppleSMC: " __VA_ARGS__)
 
 static char default_osk[64] = "This is a dummy key. Enter the real key "
                               "using the -osk parameter";
