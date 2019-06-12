@@ -1254,7 +1254,8 @@ static void build_isa_devices_aml(Aml *table)
     aml_append(scope, build_rtc_device_aml());
     aml_append(scope, build_kbd_device_aml());
     aml_append(scope, build_mouse_device_aml());
-    if (fdc) {
+    /* AppleSMC conflicts with FDC, do not expose FDC if AppleSMC is present */
+    if (fdc && !applesmc_port()) {
         aml_append(scope, build_fdc_device_aml(fdc));
     }
     aml_append(scope, build_lpt_device_aml());
