@@ -363,6 +363,7 @@ typedef enum X86Seg {
 #define FEATURE_CONTROL_LMCE                      (1<<20)
 
 #define MSR_P6_PERFCTR0                 0xc1
+#define MSR_PLATFORM_INFO               0xce
 
 #define MSR_IA32_SMBASE                 0x9e
 #define MSR_SMI_COUNT                   0x34

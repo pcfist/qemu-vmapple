@@ -424,6 +424,10 @@ void helper_rdmsr(CPUX86State *env)
         /* CPU multiplier */
         val |= (((uint64_t)4ULL) << 40);
         break;
+    case MSR_PLATFORM_INFO:
+        /* minimum CPU multiplier */
+        val = 4 << 8;
+        break;
 #ifdef TARGET_X86_64
     case MSR_LSTAR:
         val = env->lstar;
