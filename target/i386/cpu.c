@@ -4148,7 +4148,11 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
     } else if (index >= 0x80000000) {
         limit = env->cpuid_xlevel;
     } else if (index >= 0x40000000) {
-        limit = 0x40000001;
+        if (cpu->vmware_cpuid_freq) {
+            limit = 0x40000010;
+        } else {
+            limit = 0x40000001;
+        }
     } else {
         limit = env->cpuid_level;
     }
@@ -4384,7 +4388,11 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
          */
         if (tcg_enabled() && cpu->expose_tcg) {
             memcpy(signature, "TCGTCGTCGTCG", 12);
-            *eax = 0x40000001;
+            if (cpu->vmware_cpuid_freq) {
+                *eax = 0x40000010;
+            } else {
+                *eax = 0x40000001;
+            }
             *ebx = signature[0];
             *ecx = signature[1];
             *edx = signature[2];
@@ -4400,6 +4408,18 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
         *ebx = 0;
         *ecx = 0;
         *edx = 0;
+        break;
+    case 0x40000010:
+        *eax = 0;
+        *ebx = 0;
+        *ecx = 0;
+        *edx = 0;
+        if (tcg_enabled() && cpu->expose_tcg && cpu->vmware_cpuid_freq) {
+            *eax = 2000000; /* 2Ghz, not true */
+            *ebx = 1000000; /* 1Ghz */
+            *ecx = 0;
+            *edx = 0;
+        }
         break;
     case 0x80000000:
         *eax = env->cpuid_xlevel;
