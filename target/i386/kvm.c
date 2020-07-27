@@ -4480,6 +4480,9 @@ static int kvm_arch_handle_rdmsr(CPUState *cs, struct kvm_run *run)
     run->msr.reply = 1;
 
     switch (run->msr.index) {
+    case MSR_CORE_THREAD_COUNT:
+        run->msr.data = (cs->nr_threads * cs->nr_cores) | (cs->nr_cores << 16);
+        break;
     default:
         qemu_log_mask(LOG_UNIMP, "Triggering #GP for RDMSR on %x\n",
                       run->msr.index);
