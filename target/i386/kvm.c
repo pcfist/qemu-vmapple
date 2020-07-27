@@ -34,6 +34,7 @@
 #include "qemu/main-loop.h"
 #include "qemu/config-file.h"
 #include "qemu/error-report.h"
+#include "qemu/log.h"
 #include "hw/i386/x86.h"
 #include "hw/i386/apic.h"
 #include "hw/i386/apic_internal.h"
@@ -2139,6 +2140,15 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
         ret = kvm_vm_enable_cap(s, KVM_CAP_EXCEPTION_PAYLOAD, 0, true);
         if (ret < 0) {
             error_report("kvm: Failed to enable exception payload cap: %s",
+                         strerror(-ret));
+            return ret;
+        }
+    }
+
+    if (kvm_check_extension(s, KVM_CAP_X86_USER_SPACE_MSR)) {
+        ret = kvm_vm_enable_cap(s, KVM_CAP_X86_USER_SPACE_MSR, 0, true);
+        if (ret < 0) {
+            error_report("kvm: Failed to enable user space MSR cap: %s",
                          strerror(-ret));
             return ret;
         }
@@ -4465,6 +4475,34 @@ void kvm_arch_update_guest_debug(CPUState *cpu, struct kvm_guest_debug *dbg)
     }
 }
 
+static int kvm_arch_handle_rdmsr(CPUState *cs, struct kvm_run *run)
+{
+    run->msr.reply = 1;
+
+    switch (run->msr.index) {
+    default:
+        qemu_log_mask(LOG_UNIMP, "Triggering #GP for RDMSR on %x\n",
+                      run->msr.index);
+        run->msr.error = 1;
+    }
+
+    return 0;
+}
+
+static int kvm_arch_handle_wrmsr(CPUState *cs, struct kvm_run *run)
+{
+    run->msr.reply = 1;
+
+    switch (run->msr.index) {
+    default:
+        qemu_log_mask(LOG_UNIMP, "Triggering #GP for WRMSR on %x\n",
+                      run->msr.index);
+        run->msr.error = 1;
+    }
+
+    return 0;
+}
+
 static bool host_supports_vmx(void)
 {
     uint32_t ecx, unused;
@@ -4531,6 +4569,10 @@ int kvm_arch_handle_exit(CPUState *cs, struct kvm_run *run)
         ioapic_eoi_broadcast(run->eoi.vector);
         ret = 0;
         break;
+    case KVM_EXIT_RDMSR:
+        return kvm_arch_handle_rdmsr(cs, run);
+    case KVM_EXIT_WRMSR:
+        return kvm_arch_handle_wrmsr(cs, run);
     default:
         fprintf(stderr, "KVM: unknown exit reason %d\n", run->exit_reason);
         ret = -1;
