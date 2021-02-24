@@ -647,6 +647,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             trace_hvf_unknown_smc(env->xregs[0]);
             env->xregs[0] = -1;
         }
+        advance_pc = true;
         break;
     default:
         cpu_synchronize_state(cpu);
