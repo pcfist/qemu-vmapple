@@ -2143,6 +2143,7 @@ common_all = static_library('common',
                             build_by_default: false,
                             sources: common_all.sources() + genh,
                             dependencies: common_all.dependencies(),
+                            implicit_include_directories: false,
                             name_suffix: 'fa')
 
 feature_to_c = find_program('scripts/feature_to_c.sh')
