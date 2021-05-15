@@ -548,6 +548,8 @@ static void hvf_wait_for_ipi(CPUState *cpu, struct timespec *ts)
 
 static void hvf_wfi(CPUState *cpu)
 {
+    ARMCPU *arm_cpu = ARM_CPU(cpu);
+    hv_return_t r;
     uint64_t ctl;
 
     if (cpu->interrupt_request & (CPU_INTERRUPT_HARD | CPU_INTERRUPT_FIQ)) {
@@ -562,7 +564,7 @@ static void hvf_wfi(CPUState *cpu)
     if (!(ctl & 1) || (ctl & 2)) {
         /* Timer disabled or masked, just wait for an IPI. */
         hvf_wait_for_ipi(cpu, NULL);
-        break;
+        return;
     }
 
     uint64_t cval;
@@ -572,7 +574,7 @@ static void hvf_wfi(CPUState *cpu)
 
     int64_t ticks_to_sleep = cval - mach_absolute_time();
     if (ticks_to_sleep < 0) {
-        break;
+        return;
     }
 
     uint64_t seconds = ticks_to_sleep / arm_cpu->gt_cntfrq_hz;
@@ -586,7 +588,7 @@ static void hvf_wfi(CPUState *cpu)
      * Measurements on M1 show the sweet spot to be ~2ms.
      */
     if (!seconds && nanos < 2000000) {
-        break;
+        return;
     }
 
     struct timespec ts = { seconds, nanos };
