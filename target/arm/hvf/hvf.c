@@ -467,6 +467,8 @@ static void hvf_raise_exception(CPUARMState *env, uint32_t excp, uint32_t syndro
     env->elr_el[new_el] = env->pc;
     env->banked_spsr[aarch64_banked_spsr_index(new_el)] = old_mode;
     pstate_write(env, PSTATE_DAIF | new_mode);
+    aarch64_restore_sp(env, new_el);
+    env->pc = addr;
 }
 
 static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
