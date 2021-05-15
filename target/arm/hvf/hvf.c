@@ -455,6 +455,20 @@ void hvf_kick_vcpu_thread(CPUState *cpu)
     hv_vcpus_exit(&cpu->hvf->fd, 1);
 }
 
+static void hvf_raise_exception(CPUARMState *env, uint32_t excp, uint32_t syndrome)
+{
+    unsigned int new_el = 1;
+    unsigned int old_mode = pstate_read(env);;
+    unsigned int new_mode = aarch64_pstate_mode(new_el, true);
+    target_ulong addr = env->cp15.vbar_el[new_el];
+
+    env->cp15.esr_el[new_el] = syndrome;
+    aarch64_save_sp(env, arm_current_el(env));
+    env->elr_el[new_el] = env->pc;
+    env->banked_spsr[aarch64_banked_spsr_index(new_el)] = old_mode;
+    pstate_write(env, PSTATE_DAIF | new_mode);
+}
+
 static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
@@ -632,22 +646,13 @@ int hvf_vcpu_exec(CPUState *cpu)
         break;
     case EC_AA64_HVC:
         cpu_synchronize_state(cpu);
-        if (arm_is_psci_call(arm_cpu, EXCP_HVC)) {
-            arm_handle_psci_call(arm_cpu);
-        } else {
-            trace_hvf_unknown_hvf(env->xregs[0]);
-            env->xregs[0] = -1;
-        }
+        trace_hvf_unknown_hvf(env->xregs[0]);
+        hvf_raise_exception(env, EXCP_UDEF, syn_uncategorized());
         break;
     case EC_AA64_SMC:
         cpu_synchronize_state(cpu);
-        if (arm_is_psci_call(arm_cpu, EXCP_SMC)) {
-            arm_handle_psci_call(arm_cpu);
-        } else {
-            trace_hvf_unknown_smc(env->xregs[0]);
-            env->xregs[0] = -1;
-        }
-        advance_pc = true;
+        trace_hvf_unknown_smc(env->xregs[0]);
+        hvf_raise_exception(env, EXCP_UDEF, syn_uncategorized());
         break;
     default:
         cpu_synchronize_state(cpu);
