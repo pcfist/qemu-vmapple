@@ -546,6 +546,53 @@ static void hvf_wait_for_ipi(CPUState *cpu, struct timespec *ts)
     qemu_mutex_lock_iothread();
 }
 
+static void hvf_wfi(CPUState *cpu)
+{
+    uint64_t ctl;
+
+    if (cpu->interrupt_request & (CPU_INTERRUPT_HARD | CPU_INTERRUPT_FIQ)) {
+        /* Interrupt pending, no need to wait */
+        return;
+    }
+
+    r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_CNTV_CTL_EL0,
+                            &ctl);
+    assert_hvf_ok(r);
+
+    if (!(ctl & 1) || (ctl & 2)) {
+        /* Timer disabled or masked, just wait for an IPI. */
+        hvf_wait_for_ipi(cpu, NULL);
+        break;
+    }
+
+    uint64_t cval;
+    r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_CNTV_CVAL_EL0,
+                            &cval);
+    assert_hvf_ok(r);
+
+    int64_t ticks_to_sleep = cval - mach_absolute_time();
+    if (ticks_to_sleep < 0) {
+        break;
+    }
+
+    uint64_t seconds = ticks_to_sleep / arm_cpu->gt_cntfrq_hz;
+    uint64_t nanos =
+        (ticks_to_sleep - arm_cpu->gt_cntfrq_hz * seconds) *
+        1000000000 / arm_cpu->gt_cntfrq_hz;
+
+    /*
+     * Don't sleep for less than the time a context switch would take,
+     * so that we can satisfy fast timer requests on the same CPU.
+     * Measurements on M1 show the sweet spot to be ~2ms.
+     */
+    if (!seconds && nanos < 2000000) {
+        break;
+    }
+
+    struct timespec ts = { seconds, nanos };
+    hvf_wait_for_ipi(cpu, &ts);
+}
+
 int hvf_vcpu_exec(CPUState *cpu)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
@@ -661,45 +708,8 @@ int hvf_vcpu_exec(CPUState *cpu)
     }
     case EC_WFX_TRAP:
         advance_pc = true;
-        if (!(syndrome & WFX_IS_WFE) && !(cpu->interrupt_request &
-            (CPU_INTERRUPT_HARD | CPU_INTERRUPT_FIQ))) {
-
-            uint64_t ctl;
-            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_CNTV_CTL_EL0,
-                                    &ctl);
-            assert_hvf_ok(r);
-
-            if (!(ctl & 1) || (ctl & 2)) {
-                /* Timer disabled or masked, just wait for an IPI. */
-                hvf_wait_for_ipi(cpu, NULL);
-                break;
-            }
-
-            uint64_t cval;
-            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_CNTV_CVAL_EL0,
-                                    &cval);
-            assert_hvf_ok(r);
-
-            int64_t ticks_to_sleep = cval - mach_absolute_time();
-            if (ticks_to_sleep < 0) {
-                break;
-            }
-
-            uint64_t seconds = ticks_to_sleep / arm_cpu->gt_cntfrq_hz;
-            uint64_t nanos =
-                (ticks_to_sleep - arm_cpu->gt_cntfrq_hz * seconds) *
-                1000000000 / arm_cpu->gt_cntfrq_hz;
-
-            /*
-             * Don't sleep for less than 2ms. This is believed to improve
-             * latency of message passing workloads.
-             */
-            if (!seconds && nanos < 2000000) {
-                break;
-            }
-
-            struct timespec ts = { seconds, nanos };
-            hvf_wait_for_ipi(cpu, &ts);
+        if (!(syndrome & WFX_IS_WFE)) {
+            hvf_wfi(cpu);
         }
         break;
     case EC_AA64_HVC:
