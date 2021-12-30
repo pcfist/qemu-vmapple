@@ -61,6 +61,8 @@
 #define TMR_CTL_IMASK   (1 << 1)
 #define TMR_CTL_ISTATUS (1 << 2)
 
+static const bool windows_workaround_enabled = true;
+
 static void hvf_wfi(CPUState *cpu);
 
 typedef struct HVFVTimer {
@@ -1218,7 +1220,8 @@ int hvf_vcpu_exec(CPUState *cpu)
         break;
     case EC_AA64_SMC:
         cpu_synchronize_state(cpu);
-        if (arm_cpu->psci_conduit == QEMU_PSCI_CONDUIT_SMC) {
+        if (windows_workaround_enabled ||
+            arm_cpu->psci_conduit == QEMU_PSCI_CONDUIT_SMC) {
             advance_pc = true;
 
             if (!hvf_handle_psci_call(cpu)) {
