@@ -493,7 +493,7 @@ static TestServer *test_server_new(const gchar *name,
 
     tmpfs = g_dir_make_tmp("vhost-test-XXXXXX", &err);
     if (!tmpfs) {
-        g_test_message("g_dir_make_tmp on path (%s): %s", tmpfs,
+        g_test_message("g_dir_make_tmp on path (%s): %s", "(null)",
                        err->message);
         g_error_free(err);
     }
