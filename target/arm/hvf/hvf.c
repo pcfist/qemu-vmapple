@@ -663,6 +663,7 @@ static void hvf_raise_exception(CPUState *cpu, uint32_t excp,
     ARMCPU *arm_cpu = ARM_CPU(cpu);
     CPUARMState *env = &arm_cpu->env;
 
+    trace_hvf_raise_exception(excp, syndrome);
     cpu->exception_index = excp;
     env->exception.target_el = 1;
     env->exception.syndrome = syndrome;
