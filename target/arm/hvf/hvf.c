@@ -1442,8 +1442,8 @@ int hvf_vcpu_exec(CPUState *cpu)
                 env->xregs[0] = -1;
             }
         } else {
-            trace_hvf_unknown_smc(env->xregs[0]);
-            hvf_raise_exception(cpu, EXCP_UDEF, syn_uncategorized());
+            advance_pc = true;
+            env->xregs[0] = -1;
         }
         break;
     default:
