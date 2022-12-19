@@ -2204,10 +2204,14 @@ static void disas_exc(DisasContext *s, uint32_t insn)
                 unallocated_encoding(s);
                 break;
             }
+            if (1) {
+                tcg_gen_movi_i64(cpu_reg(s, 0), -1);
+            } else {
             gen_a64_update_pc(s, 0);
             gen_helper_pre_smc(cpu_env, tcg_constant_i32(syn_aa64_smc(imm16)));
             gen_ss_advance(s);
             gen_exception_insn_el(s, 4, EXCP_SMC, syn_aa64_smc(imm16), 3);
+            }
             break;
         default:
             unallocated_encoding(s);
