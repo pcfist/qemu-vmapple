@@ -4930,8 +4930,8 @@ SRST
         option.
 
         The ``offset`` option specifies the offset into the target file
-        that the region starts at. You can use this parameter to overload
-        multiple regions into a single file.
+        that the region starts at. You can use this parameter to back
+        multiple regions with a single file.
 
         The ``pmem`` option specifies whether the backing file specified
         by ``mem-path`` is in host persistent memory that can be
