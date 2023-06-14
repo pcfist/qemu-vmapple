@@ -1120,6 +1120,20 @@ static int virtio_blk_handle_request(VirtIOBlockReq *req, MultiReqBuffer *mrb)
 
         break;
     }
+    case VIRTIO_BLK_T_APPLE1:
+    {
+        if (s->conf.x_apple_type) {
+            /* Only valid on Apple Virtio */
+            char buf[iov_size(in_iov, in_num)];
+            memset(buf, 0, sizeof(buf));
+            iov_from_buf(in_iov, in_num, 0, buf, sizeof(buf));
+            virtio_blk_req_complete(req, VIRTIO_BLK_S_OK);
+        } else {
+            virtio_blk_req_complete(req, VIRTIO_BLK_S_UNSUPP);
+        }
+        virtio_blk_free_request(req);
+        break;
+    }
     default:
         virtio_blk_req_complete(req, VIRTIO_BLK_S_UNSUPP);
         virtio_blk_free_request(req);
@@ -1350,6 +1364,10 @@ static void virtio_blk_update_config(VirtIODevice *vdev, uint8_t *config)
                      bs->bl.max_append_sectors);
     } else {
         blkcfg.zoned.model = VIRTIO_BLK_Z_NONE;
+    }
+    if (s->conf.x_apple_type) {
+        /* Apple abuses the same location for its type id */
+        blkcfg.max_secure_erase_sectors = s->conf.x_apple_type;
     }
     memcpy(config, &blkcfg, s->config_size);
 }
@@ -1625,6 +1643,10 @@ static void virtio_blk_device_realize(DeviceState *dev, Error **errp)
 
     s->config_size = virtio_get_config_size(&virtio_blk_cfg_size_params,
                                             s->host_features);
+    if (s->conf.x_apple_type) {
+        /* Apple Virtio puts the blk type at 0x3c, make sure we have space. */
+        s->config_size = MAX(s->config_size, 0x3d);
+    }
     virtio_init(vdev, VIRTIO_ID_BLOCK, s->config_size);
 
     s->blk = conf->conf.blk;
@@ -1734,6 +1756,7 @@ static Property virtio_blk_properties[] = {
                        conf.max_write_zeroes_sectors, BDRV_REQUEST_MAX_SECTORS),
     DEFINE_PROP_BOOL("x-enable-wce-if-config-wce", VirtIOBlock,
                      conf.x_enable_wce_if_config_wce, true),
+    DEFINE_PROP_UINT32("x-apple-type", VirtIOBlock, conf.x_apple_type, 0),
     DEFINE_PROP_END_OF_LIST(),
 };
 

@@ -46,6 +46,7 @@ struct VirtIOBlkConf
     uint32_t max_discard_sectors;
     uint32_t max_write_zeroes_sectors;
     bool x_enable_wce_if_config_wce;
+    uint32_t x_apple_type;
 };
 
 struct VirtIOBlockDataPlane;

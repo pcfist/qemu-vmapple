@@ -62,6 +62,13 @@ static void virtio_blk_pci_realize(VirtIOPCIProxy *vpci_dev, Error **errp)
     }
 
     qdev_realize(vdev, BUS(&vpci_dev->bus), errp);
+
+    if (conf->x_apple_type) {
+        /* Apple virtio-blk uses a different vendor/device id */
+        pci_config_set_vendor_id(vpci_dev->pci_dev.config, PCI_VENDOR_ID_APPLE);
+        pci_config_set_device_id(vpci_dev->pci_dev.config,
+                                 PCI_DEVICE_ID_APPLE_VIRTIO_BLK);
+    }
 }
 
 static void virtio_blk_pci_class_init(ObjectClass *klass, void *data)
