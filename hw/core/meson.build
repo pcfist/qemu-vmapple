@@ -31,6 +31,7 @@ system_ss.add(files(
   'gpio.c',
   'hotplug.c',
   'loader.c',
+  'loader-bdrv.c',
   'machine-hmp-cmds.c',
   'machine-qmp-cmds.c',
   'machine.c',

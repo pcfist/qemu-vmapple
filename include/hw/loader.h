@@ -1,6 +1,8 @@
 #ifndef LOADER_H
 #define LOADER_H
 #include "hw/nvram/fw_cfg.h"
+#include "hw/block/block.h"
+#include "sysemu/sysemu.h"
 
 /* loader.c */
 /**
@@ -373,5 +375,20 @@ typedef struct RomGap {
  * it finds the biggest gap which is free for use for other things.
  */
 RomGap rom_find_largest_gap_between(hwaddr base, size_t size);
+
+/**
+ * call_with_kernel: Call function with kernel files already open
+ * @ms: Machine State for the machine that loads the kernel
+ * @fn: Callback function that gets invoked
+ *
+ * Open QEMU bdrv states for all kernel and affiliated files as
+ * indicated by machine state @ms, then execute callback function
+ * @fn with all files open.
+ */
+void call_with_kernel(MachineState *ms,
+                      void (*fn)(MachineState *ms, BlockDriverState *kernel_bs,
+                                  GList *initrds, BlockDriverState *dtb_bs,
+                                  Error **errp),
+                      Error **errp);
 
 #endif
